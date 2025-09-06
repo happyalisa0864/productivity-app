@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:productivity_app/features/home/presentation/pages/home_page.dart';
+import 'package:productivity_app/features/welcome/presentation/pages/app_entry.dart';
 
 void main() {
   runApp(const ProviderScope(child: MyApp()));
@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const HomePage(),
+      home: const AppEntry(),
     );
   }
 }
