@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:productivity_app/src/presentation/providers/task_providers.dart';
-import 'package:productivity_app/src/presentation/widgets/add_task_dialog.dart';
-import 'package:productivity_app/src/presentation/widgets/task_tile.dart';
+import 'package:productivity_app/features/home/presentation/providers/task_providers.dart';
+import 'package:productivity_app/features/home/presentation/widgets/add_task_dialog.dart';
+import 'package:productivity_app/features/home/presentation/widgets/task_tile.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});

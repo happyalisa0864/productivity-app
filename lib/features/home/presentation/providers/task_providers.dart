@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:productivity_app/src/core/providers.dart';
-import 'package:productivity_app/src/domain/entities/task.dart';
-import 'package:productivity_app/src/presentation/notifiers/task_notifier.dart';
+import 'package:productivity_app/features/core/providers.dart';
+import 'package:productivity_app/features/home/domain/entities/task.dart';
+import 'package:productivity_app/features/home/presentation/notifiers/task_notifier.dart';
 
 final taskNotifierProvider =
     StateNotifierProvider<TaskNotifier, AsyncValue<List<Task>>>((ref) {

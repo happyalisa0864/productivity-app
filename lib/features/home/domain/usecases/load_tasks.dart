@@ -1,5 +1,5 @@
-import 'package:productivity_app/src/domain/entities/task.dart';
-import 'package:productivity_app/src/domain/repositories/task_repository.dart';
+import 'package:productivity_app/features/home/domain/entities/task.dart';
+import 'package:productivity_app/features/home/domain/repositories/task_repository.dart';
 
 class LoadTasks {
   final TaskRepository repository;

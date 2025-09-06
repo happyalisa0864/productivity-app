@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:productivity_app/src/domain/entities/task.dart';
-import 'package:productivity_app/src/presentation/utils/time_format.dart';
+import 'package:productivity_app/features/home/domain/entities/task.dart';
+import 'package:productivity_app/features/core/utils/time_format.dart';
 
 class TaskTile extends StatelessWidget {
   final Task task;

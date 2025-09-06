@@ -1,7 +1,7 @@
-import 'package:productivity_app/src/data/datasources/local_data_source.dart';
-import 'package:productivity_app/src/data/models/task_model.dart';
-import 'package:productivity_app/src/domain/entities/task.dart';
-import 'package:productivity_app/src/domain/repositories/task_repository.dart';
+import 'package:productivity_app/features/home/data/datasources/local_data_source.dart';
+import 'package:productivity_app/features/home/data/models/task_model.dart';
+import 'package:productivity_app/features/home/domain/entities/task.dart';
+import 'package:productivity_app/features/home/domain/repositories/task_repository.dart';
 
 class TaskRepositoryImpl implements TaskRepository {
   final LocalDataSource local;

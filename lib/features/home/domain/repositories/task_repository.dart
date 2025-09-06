@@ -1,4 +1,4 @@
-import 'package:productivity_app/src/domain/entities/task.dart';
+import 'package:productivity_app/features/home/domain/entities/task.dart';
 
 abstract class TaskRepository {
   Future<List<Task>> loadTasks();
