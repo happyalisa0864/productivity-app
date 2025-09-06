@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:productivity_app/features/home/domain/entities/task.dart';
+import 'package:productivity_app/features/task_tracking/domain/entities/task.dart';
 
 class TaskModel {
   final String id;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:productivity_app/features/home/presentation/pages/home_page.dart';
+import 'package:productivity_app/features/task_tracking/presentation/pages/tasks_page.dart';
 import 'package:productivity_app/features/welcome/presentation/providers/welcome_providers.dart';
 import 'package:productivity_app/features/welcome/presentation/widgets/get_started_button.dart';
 import 'package:productivity_app/features/welcome/presentation/widgets/welcome_logo.dart';
@@ -32,7 +32,7 @@ class WelcomePage extends ConsumerWidget {
                     await complete();
                     if (!context.mounted) return;
                     Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const HomePage()),
+                      MaterialPageRoute(builder: (_) => const TasksPage()),
                     );
                   },
                 ),

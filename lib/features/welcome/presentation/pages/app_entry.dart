@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:productivity_app/features/home/presentation/pages/home_page.dart';
+import 'package:productivity_app/features/task_tracking/presentation/pages/tasks_page.dart';
 import 'package:productivity_app/features/welcome/presentation/pages/welcome_page.dart';
 import 'package:productivity_app/features/welcome/presentation/providers/welcome_providers.dart';
 
@@ -32,7 +32,7 @@ class AppEntry extends ConsumerWidget {
           ),
         ),
       ),
-      data: (completed) => completed ? const HomePage() : const WelcomePage(),
+      data: (completed) => completed ? const TasksPage() : const WelcomePage(),
     );
   }
 }
