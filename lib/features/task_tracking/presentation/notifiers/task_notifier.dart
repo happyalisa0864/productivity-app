@@ -152,6 +152,38 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     if (save) await _persist(list);
   }
 
+  Future<void> updateTask({
+    required String id,
+    String? title,
+    int? minutes,
+    String? category,
+  }) async {
+    final list = [...(state.value ?? <Task>[])];
+    final idx = list.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+    var t = list[idx];
+
+    int? newTotalSeconds;
+    int? newRemainingSeconds;
+    if (minutes != null) {
+      newTotalSeconds = minutes * 60;
+      // Clamp remaining to new total if needed
+      newRemainingSeconds = t.remainingSeconds.clamp(0, newTotalSeconds);
+    }
+
+    t = t.copyWith(
+      title: title ?? t.title,
+      totalSeconds: newTotalSeconds ?? t.totalSeconds,
+      remainingSeconds: newRemainingSeconds ?? t.remainingSeconds,
+      category: category ?? t.category,
+      updatedAt: DateTime.now(),
+    );
+
+    list[idx] = t;
+    state = AsyncData(list);
+    await _persist(list);
+  }
+
   @override
   void dispose() {
     _timer?.cancel();

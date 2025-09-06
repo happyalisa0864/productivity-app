@@ -5,6 +5,7 @@ class Task {
   final int remainingSeconds;
   final bool isCompleted;
   final bool isRunning;
+  final String? category;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -15,6 +16,7 @@ class Task {
     required this.remainingSeconds,
     required this.isCompleted,
     required this.isRunning,
+    this.category,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -26,6 +28,7 @@ class Task {
     int? remainingSeconds,
     bool? isCompleted,
     bool? isRunning,
+    String? category,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -36,6 +39,7 @@ class Task {
       remainingSeconds: remainingSeconds ?? this.remainingSeconds,
       isCompleted: isCompleted ?? this.isCompleted,
       isRunning: isRunning ?? this.isRunning,
+      category: category ?? this.category,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

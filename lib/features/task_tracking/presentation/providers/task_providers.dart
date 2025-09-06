@@ -18,3 +18,14 @@ final taskNotifierProvider =
     error: (e, st) => TaskNotifier.error(e, st),
   );
 });
+
+// Get a single task by id from the list state.
+final taskByIdProvider = Provider.family<AsyncValue<Task?>, String>((ref, id) {
+  final listAsync = ref.watch(taskNotifierProvider);
+  return listAsync.whenData((list) {
+    for (final t in list) {
+      if (t.id == id) return t;
+    }
+    return null;
+  });
+});

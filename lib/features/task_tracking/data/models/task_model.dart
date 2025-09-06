@@ -9,6 +9,7 @@ class TaskModel {
   final int remainingSeconds;
   final bool isCompleted;
   final bool isRunning;
+  final String? category;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -19,6 +20,7 @@ class TaskModel {
     required this.remainingSeconds,
     required this.isCompleted,
     required this.isRunning,
+    this.category,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -30,6 +32,7 @@ class TaskModel {
         remainingSeconds: e.remainingSeconds,
         isCompleted: e.isCompleted,
         isRunning: e.isRunning,
+        category: e.category,
         createdAt: e.createdAt,
         updatedAt: e.updatedAt,
       );
@@ -41,6 +44,7 @@ class TaskModel {
         remainingSeconds: remainingSeconds,
         isCompleted: isCompleted,
         isRunning: isRunning,
+        category: category,
         createdAt: createdAt,
         updatedAt: updatedAt,
       );
@@ -52,6 +56,7 @@ class TaskModel {
         'remainingSeconds': remainingSeconds,
         'isCompleted': isCompleted,
         'isRunning': isRunning,
+        'category': category,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -63,6 +68,7 @@ class TaskModel {
         remainingSeconds: (map['remainingSeconds'] as num).toInt(),
         isCompleted: map['isCompleted'] as bool,
         isRunning: map['isRunning'] as bool,
+        category: map['category'] == null ? null : map['category'] as String,
         createdAt: DateTime.parse(map['createdAt'] as String),
         updatedAt: DateTime.parse(map['updatedAt'] as String),
       );

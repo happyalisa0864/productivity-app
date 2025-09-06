@@ -8,6 +8,7 @@ class TaskTile extends StatelessWidget {
   final VoidCallback onPause;
   final VoidCallback onToggleComplete;
   final VoidCallback onDelete;
+  final VoidCallback? onEdit;
 
   const TaskTile({
     super.key,
@@ -16,6 +17,7 @@ class TaskTile extends StatelessWidget {
     required this.onPause,
     required this.onToggleComplete,
     required this.onDelete,
+    this.onEdit,
   });
 
   @override
@@ -59,6 +61,11 @@ class TaskTile extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: onEdit,
+              tooltip: 'Edit',
+            ),
             IconButton(
               icon: Icon(task.isRunning ? Icons.pause : Icons.play_arrow),
               onPressed: task.isCompleted

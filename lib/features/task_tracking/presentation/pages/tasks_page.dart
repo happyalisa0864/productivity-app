@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:productivity_app/features/task_tracking/presentation/providers/task_providers.dart';
 import 'package:productivity_app/features/task_tracking/presentation/widgets/add_task_dialog.dart';
 import 'package:productivity_app/features/task_tracking/presentation/widgets/task_tile.dart';
+import 'package:productivity_app/features/task_tracking/presentation/pages/task_edit_page.dart';
 
 class TasksPage extends ConsumerWidget {
   const TasksPage({super.key});
@@ -36,6 +37,13 @@ class TasksPage extends ConsumerWidget {
                 onPause: () => notifier.pauseTimer(),
                 onToggleComplete: () => notifier.toggleComplete(task.id),
                 onDelete: () => notifier.deleteTask(task.id),
+                onEdit: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => TaskEditPage(taskId: task.id),
+                    ),
+                  );
+                },
               );
             },
           );
