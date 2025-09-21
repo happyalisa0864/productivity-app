@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 class AddTaskResult {
   final String title;
   final int minutes;
-  const AddTaskResult(this.title, this.minutes);
+  final String? category;
+  const AddTaskResult(this.title, this.minutes, this.category);
 }
 
 class AddTaskDialog extends StatefulWidget {
@@ -18,6 +19,14 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   final _titleCtrl = TextEditingController();
   int _selectedMinutes = 25;
   static const List<int> _minuteOptions = [5, 10, 15, 20, 25, 30, 45, 60, 90];
+  String? _selectedCategory;
+  static const List<String> _categoryOptions = [
+    'Work',
+    'Study',
+    'Personal',
+    'Health',
+    'Other',
+  ];
 
   @override
   void dispose() {
@@ -29,7 +38,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     if (!_formKey.currentState!.validate()) return;
     final title = _titleCtrl.text.trim();
     final minutes = _selectedMinutes;
-    Navigator.of(context).pop(AddTaskResult(title, minutes));
+    Navigator.of(context).pop(AddTaskResult(title, minutes, _selectedCategory));
   }
 
   @override
@@ -83,6 +92,27 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                             ))
                         .toList(),
                     onChanged: (v) => setState(() => _selectedMinutes = v ?? 25),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.white,
+                      hintText: 'add items...',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _LabeledSection(
+                  label: 'Category:',
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedCategory,
+                    items: _categoryOptions
+                        .map((c) => DropdownMenuItem<String>(
+                              value: c,
+                              child: Text(c),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setState(() => _selectedCategory = v),
                     decoration: const InputDecoration(
                       isDense: true,
                       border: OutlineInputBorder(),

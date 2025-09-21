@@ -36,7 +36,7 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     await repo.saveTasks(tasks);
   }
 
-  Future<void> addTask({required String title, required int minutes}) async {
+  Future<void> addTask({required String title, required int minutes, String? category}) async {
     final current = state.value ?? <Task>[];
     final now = DateTime.now();
     final total = minutes * 60;
@@ -47,6 +47,7 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
       remainingSeconds: total,
       isCompleted: false,
       isRunning: false,
+      category: category,
       createdAt: now,
       updatedAt: now,
     );

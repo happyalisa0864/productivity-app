@@ -56,7 +56,11 @@ class TasksPage extends ConsumerWidget {
             builder: (_) => const AddTaskDialog(),
           );
           if (result != null) {
-            await notifier.addTask(title: result.title, minutes: result.minutes);
+            await notifier.addTask(
+              title: result.title,
+              minutes: result.minutes,
+              category: result.category,
+            );
           }
         },
         child: const Icon(Icons.add),
