@@ -192,8 +192,6 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
                       child: const Text('Delete Task'),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  const Text('[Pop-up for delete confirmation]'),
                   const SizedBox(height: 80),
                 ],
               ),
