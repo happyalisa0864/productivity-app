@@ -16,61 +16,131 @@ class AddTaskDialog extends StatefulWidget {
 class _AddTaskDialogState extends State<AddTaskDialog> {
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
-  final _minutesCtrl = TextEditingController(text: '25');
+  int _selectedMinutes = 25;
+  static const List<int> _minuteOptions = [5, 10, 15, 20, 25, 30, 45, 60, 90];
 
   @override
   void dispose() {
     _titleCtrl.dispose();
-    _minutesCtrl.dispose();
     super.dispose();
   }
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     final title = _titleCtrl.text.trim();
-    final minutes = int.tryParse(_minutesCtrl.text) ?? 0;
+    final minutes = _selectedMinutes;
     Navigator.of(context).pop(AddTaskResult(title, minutes));
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Add Task'),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: _titleCtrl,
-              decoration: const InputDecoration(labelText: 'Title'),
-              textInputAction: TextInputAction.next,
-              validator: (v) => (v == null || v.trim().isEmpty)
-                  ? 'Please enter a title'
-                  : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _minutesCtrl,
-              decoration: const InputDecoration(labelText: 'Minutes'),
-              keyboardType: TextInputType.number,
-              validator: (v) {
-                final n = int.tryParse(v ?? '');
-                if (n == null || n <= 0) return 'Enter a positive number';
-                if (n > 1440) return 'Keep under 24 hours';
-                return null;
-              },
-              onFieldSubmitted: (_) => _submit(),
+    return Dialog.fullscreen(
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFFE6EA),
+        appBar: AppBar(
+          title: const Text('Add Task'),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          actions: [
+            IconButton(
+              tooltip: 'Save',
+              icon: const Icon(Icons.check),
+              onPressed: _submit,
             ),
           ],
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+        body: SafeArea(
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(12),
+              children: [
+                _LabeledSection(
+                  label: 'Name of Task:',
+                  child: TextFormField(
+                    controller: _titleCtrl,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Enter a task name' : null,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _LabeledSection(
+                  label: 'Time Limit:',
+                  child: DropdownButtonFormField<int>(
+                    value: _selectedMinutes,
+                    items: _minuteOptions
+                        .map((m) => DropdownMenuItem<int>(
+                              value: m,
+                              child: Text('$m minutes'),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setState(() => _selectedMinutes = v ?? 25),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.white,
+                      hintText: 'add items...',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Center(
+                  child: ElevatedButton(
+                    onPressed: _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8BC34A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Add Task'),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
         ),
-        ElevatedButton(onPressed: _submit, child: const Text('Add')),
+      ),
+    );
+  }
+}
+
+class _LabeledSection extends StatelessWidget {
+  final String label;
+  final Widget child;
+  const _LabeledSection({required this.label, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          color: Colors.black.withOpacity(0.1),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        child,
       ],
     );
   }
