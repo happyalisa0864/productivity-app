@@ -3,22 +3,29 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:productivity_app/features/task_tracking/domain/entities/task.dart';
 import 'package:productivity_app/features/task_tracking/domain/repositories/task_repository.dart';
+import 'package:productivity_app/features/task_tracking/presentation/providers/completion_providers.dart';
+import 'package:productivity_app/features/core/services/sound_service.dart';
 import 'package:uuid/uuid.dart';
 
 class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
   final TaskRepository? _repo;
+  final Ref? _ref;
   Timer? _timer;
   String? _runningTaskId;
+  int _tickCountSinceLastPersist = 0;
+  DateTime? _timerStartTime;
 
   TaskNotifier.loading()
       : _repo = null,
+        _ref = null,
         super(const AsyncLoading());
 
   TaskNotifier.error(Object e, StackTrace st)
       : _repo = null,
+        _ref = null,
         super(AsyncError(e, st));
 
-  TaskNotifier(this._repo) : super(const AsyncLoading());
+  TaskNotifier(this._repo, [this._ref]) : super(const AsyncLoading());
 
   Future<void> init() async {
     final repo = _repo!;
@@ -98,6 +105,7 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     if (task.isCompleted) return; // do not start completed tasks
 
     _runningTaskId = id;
+    _timerStartTime = DateTime.now();
     task = task.copyWith(isRunning: true, updatedAt: DateTime.now());
     list[idx] = task;
     state = AsyncData(list);
@@ -129,11 +137,32 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
       );
       currentList[i] = cur;
       state = AsyncData(currentList);
-      await _persist(currentList);
+      // Persist less frequently to avoid excessive writes.
+      if (done) {
+        await _persist(currentList);
+      } else {
+        _tickCountSinceLastPersist++;
+        if (_tickCountSinceLastPersist >= 10) {
+          _tickCountSinceLastPersist = 0;
+          await _persist(currentList);
+        }
+      }
 
       if (done) {
         timer.cancel();
-        if (_runningTaskId == id) _runningTaskId = null;
+        if (_runningTaskId == id) {
+          _runningTaskId = null;
+          // Calculate time spent and notify completion
+          final ref = _ref;
+          if (_timerStartTime != null && ref != null) {
+            final timeSpent = DateTime.now().difference(_timerStartTime!).inSeconds;
+            // Play completion sound first
+            SoundService.playCompletionSound();
+            // Then notify completion (this will trigger navigation)
+            ref.read(taskCompletionProvider.notifier).notifyCompletion(id, timeSpent);
+          }
+          _timerStartTime = null;
+        }
       }
     });
   }

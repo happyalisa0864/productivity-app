@@ -8,7 +8,7 @@ final taskNotifierProvider =
   final repoAsync = ref.watch(repositoryProvider);
   return repoAsync.when(
     data: (repo) {
-      final notifier = TaskNotifier(repo);
+      final notifier = TaskNotifier(repo, ref);
       // Fire-and-forget initialization
       // ignore: discarded_futures
       notifier.init();

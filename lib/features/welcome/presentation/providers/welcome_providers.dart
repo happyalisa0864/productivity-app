@@ -1,13 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:productivity_app/features/core/providers.dart';
 import 'package:productivity_app/features/welcome/data/datasources/onboarding_local_data_source.dart';
 import 'package:productivity_app/features/welcome/data/repositories/onboarding_repository_impl.dart';
 import 'package:productivity_app/features/welcome/domain/repositories/onboarding_repository.dart';
 import 'package:productivity_app/features/welcome/domain/usecases/complete_onboarding.dart';
 import 'package:productivity_app/features/welcome/domain/usecases/is_onboarding_complete.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-final onboardingRepositoryProvider = FutureProvider<OnboardingRepository>((ref) async {
-  final prefs = await SharedPreferences.getInstance();
+final onboardingRepositoryProvider =
+    FutureProvider<OnboardingRepository>((ref) async {
+  final prefs = await ref.watch(sharedPreferencesProvider.future);
   final local = SharedPreferencesOnboardingLocalDataSource(prefs);
   return OnboardingRepositoryImpl(local);
 });
