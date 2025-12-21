@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:productivity_app/features/task_tracking/presentation/pages/statistics_page.dart';
-import 'package:productivity_app/features/task_tracking/presentation/pages/break_timer_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -9,7 +9,6 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final background = const Color(0xFFFAF7F5);
     final textColor = const Color(0xFF4E4A47);
-    final primary = const Color(0xFFE6C0C0);
 
     return Scaffold(
       backgroundColor: background,
@@ -33,130 +32,6 @@ class SettingsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 16),
         children: [
-          // General Section
-          _SectionHeader(title: 'General'),
-          _SettingsCard(
-            children: [
-              _SettingsItem(
-                icon: Icons.notifications,
-                title: 'Sound Notifications',
-                trailing: Switch(
-                  value: true,
-                  onChanged: (value) {},
-                  activeColor: primary,
-                ),
-              ),
-              _Divider(),
-              _SettingsItem(
-                icon: Icons.vibration,
-                title: 'Vibration',
-                trailing: Switch(
-                  value: false,
-                  onChanged: (value) {},
-                  activeColor: primary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          // Appearance Section
-          _SectionHeader(title: 'Appearance'),
-          _SettingsCard(
-            children: [
-              _SettingsItem(
-                icon: Icons.palette,
-                title: 'Theme',
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Pastel Rose',
-                      style: TextStyle(
-                        color: textColor.withOpacity(0.7),
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: textColor.withOpacity(0.5),
-                    ),
-                  ],
-                ),
-              ),
-              _Divider(),
-              _SettingsItem(
-                icon: Icons.title,
-                title: 'Font Style',
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Default',
-                      style: TextStyle(
-                        color: textColor.withOpacity(0.7),
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: textColor.withOpacity(0.5),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          // Timer Settings Section
-          _SectionHeader(title: 'Timer Settings'),
-          _SettingsCard(
-            children: [
-              _SettingsItem(
-                icon: Icons.timer,
-                title: 'Default Timer Duration',
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '25 min',
-                      style: TextStyle(
-                        color: textColor.withOpacity(0.7),
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: textColor.withOpacity(0.5),
-                    ),
-                  ],
-                ),
-              ),
-              _Divider(),
-              _SettingsItem(
-                icon: Icons.free_breakfast,
-                title: 'Start Break Timer',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const BreakTimerPage(breakMinutes: 5),
-                    ),
-                  );
-                },
-                trailing: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: textColor.withOpacity(0.5),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
           // Statistics Section
           _SectionHeader(title: 'Statistics'),
           _SettingsCard(
@@ -197,6 +72,22 @@ class SettingsPage extends StatelessWidget {
               _SettingsItem(
                 icon: Icons.feedback,
                 title: 'Send Feedback',
+                onTap: () async {
+                  final Uri url = Uri.parse(
+                    'https://docs.google.com/forms/d/e/1FAIpQLSd4BHYuExDT6xuNMED3v068Owo_fhfVpZAnTvnt6vh7RxrPUA/viewform?usp=publish-editor',
+                  );
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Could not open feedback form'),
+                        ),
+                      );
+                    }
+                  }
+                },
                 trailing: Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
