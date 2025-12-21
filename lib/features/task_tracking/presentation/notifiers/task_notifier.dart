@@ -3,8 +3,6 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:productivity_app/features/task_tracking/domain/entities/task.dart';
 import 'package:productivity_app/features/task_tracking/domain/repositories/task_repository.dart';
-import 'package:productivity_app/features/task_tracking/presentation/providers/completion_providers.dart';
-import 'package:productivity_app/features/core/services/sound_service.dart';
 import 'package:uuid/uuid.dart';
 
 class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
@@ -73,20 +71,69 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     await _persist(updated);
   }
 
+  Future<void> deleteAllTasks() async {
+    // Stop any running timer
+    if (_runningTaskId != null) {
+      await pauseTimer();
+    }
+    state = const AsyncData(<Task>[]);
+    await _persist(<Task>[]);
+  }
+
   Future<void> toggleComplete(String id) async {
     final list = [...(state.value ?? <Task>[])];
     final idx = list.indexWhere((t) => t.id == id);
     if (idx == -1) return;
     final t = list[idx];
     final completed = !t.isCompleted;
-    // If marking complete and it's running, pause
+    // If marking complete and it's running, pause first to get the latest remainingSeconds
     if (completed && _runningTaskId == id) {
-      await pauseTimer(save: false);
+      // Cancel timer immediately to stop any further updates
+      _timer?.cancel();
+      final runningId = _runningTaskId;
+      _runningTaskId = null;
+      
+      // Wait for any pending async timer updates to complete
+      // Use a small delay to ensure timer callbacks have finished executing
+      await Future.delayed(const Duration(milliseconds: 150));
+      
+      // Force a final update to capture the latest remainingSeconds (including negative values)
+      final currentList = [...(state.value ?? <Task>[])];
+      final currentIdx = currentList.indexWhere((t) => t.id == runningId);
+      if (currentIdx != -1) {
+        // Get the latest task state (which should have the negative remainingSeconds)
+        final latestTask = currentList[currentIdx];
+        // Update to stop running and preserve remainingSeconds (including negative values)
+        currentList[currentIdx] = latestTask.copyWith(
+          isRunning: false,
+          updatedAt: DateTime.now(),
+        );
+        state = AsyncData(currentList);
+        // Persist this final state to ensure negative remainingSeconds is saved
+        await _persist(currentList);
+        
+        // Now mark as completed with the preserved remainingSeconds
+        final finalList = [...(state.value ?? <Task>[])];
+        final finalIdx = finalList.indexWhere((t) => t.id == id);
+        if (finalIdx != -1) {
+          final finalTask = finalList[finalIdx];
+          finalList[finalIdx] = finalTask.copyWith(
+            isCompleted: completed,
+            isRunning: false,
+            updatedAt: DateTime.now(),
+            completedAt: completed ? DateTime.now() : null,
+          );
+          state = AsyncData(finalList);
+          await _persist(finalList);
+          return;
+        }
+      }
     }
     list[idx] = t.copyWith(
       isCompleted: completed,
       isRunning: false,
       updatedAt: DateTime.now(),
+      completedAt: completed ? DateTime.now() : null,
     );
     state = AsyncData(list);
     await _persist(list);
@@ -106,7 +153,14 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
 
     _runningTaskId = id;
     _timerStartTime = DateTime.now();
-    task = task.copyWith(isRunning: true, updatedAt: DateTime.now());
+    // If task was paused (not running and has remaining time), continue from where it left off
+    // Otherwise, reset to totalSeconds (covers: never started, or time limit was just edited)
+    final wasPaused = !task.isRunning && task.remainingSeconds < task.totalSeconds;
+    task = task.copyWith(
+      isRunning: true,
+      remainingSeconds: wasPaused ? task.remainingSeconds : task.totalSeconds,
+      updatedAt: DateTime.now(),
+    );
     list[idx] = task;
     state = AsyncData(list);
     await _persist(list);
@@ -127,42 +181,20 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
         return;
       }
 
-      final remaining = (cur.remainingSeconds - 1).clamp(0, cur.totalSeconds);
-      final done = remaining == 0;
+      // Allow timer to go negative (overtime) - don't clamp to 0
+      final remaining = cur.remainingSeconds - 1;
       cur = cur.copyWith(
         remainingSeconds: remaining,
-        isRunning: !done,
-        isCompleted: cur.isCompleted || done,
         updatedAt: DateTime.now(),
       );
       currentList[i] = cur;
       state = AsyncData(currentList);
-      // Persist less frequently to avoid excessive writes.
-      if (done) {
+      
+      // Persist less frequently to avoid excessive writes
+      _tickCountSinceLastPersist++;
+      if (_tickCountSinceLastPersist >= 10) {
+        _tickCountSinceLastPersist = 0;
         await _persist(currentList);
-      } else {
-        _tickCountSinceLastPersist++;
-        if (_tickCountSinceLastPersist >= 10) {
-          _tickCountSinceLastPersist = 0;
-          await _persist(currentList);
-        }
-      }
-
-      if (done) {
-        timer.cancel();
-        if (_runningTaskId == id) {
-          _runningTaskId = null;
-          // Calculate time spent and notify completion
-          final ref = _ref;
-          if (_timerStartTime != null && ref != null) {
-            final timeSpent = DateTime.now().difference(_timerStartTime!).inSeconds;
-            // Play completion sound first
-            SoundService.playCompletionSound();
-            // Then notify completion (this will trigger navigation)
-            ref.read(taskCompletionProvider.notifier).notifyCompletion(id, timeSpent);
-          }
-          _timerStartTime = null;
-        }
       }
     });
   }
@@ -173,6 +205,9 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     _runningTaskId = null;
     if (runningId == null) return;
 
+    // Wait a tiny bit to ensure any in-flight timer updates complete
+    await Future.microtask(() {});
+    
     final list = [...(state.value ?? <Task>[])];
     final idx = list.indexWhere((t) => t.id == runningId);
     if (idx == -1) return;
@@ -197,14 +232,21 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     int? newRemainingSeconds;
     if (minutes != null) {
       newTotalSeconds = minutes * 60;
-      // Clamp remaining to new total if needed
-      newRemainingSeconds = t.remainingSeconds.clamp(0, newTotalSeconds);
+      // If task is not running, reset to new total when time limit is edited
+      // If task is running, clamp remaining to new total if needed
+      if (!t.isRunning) {
+        newRemainingSeconds = newTotalSeconds;
+      } else {
+        newRemainingSeconds = t.remainingSeconds.clamp(0, newTotalSeconds);
+      }
     }
+    // If minutes is null (only title/category changed), preserve remainingSeconds
+    // This is especially important when the task is running
 
     t = t.copyWith(
       title: title ?? t.title,
       totalSeconds: newTotalSeconds ?? t.totalSeconds,
-      remainingSeconds: newRemainingSeconds ?? t.remainingSeconds,
+      remainingSeconds: newRemainingSeconds ?? t.remainingSeconds, // Preserves current time if minutes is null
       category: category ?? t.category,
       updatedAt: DateTime.now(),
     );

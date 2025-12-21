@@ -8,6 +8,7 @@ class Task {
   final String? category;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? completedAt;
 
   const Task({
     required this.id,
@@ -19,6 +20,7 @@ class Task {
     this.category,
     required this.createdAt,
     required this.updatedAt,
+    this.completedAt,
   });
 
   Task copyWith({
@@ -31,6 +33,7 @@ class Task {
     String? category,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? completedAt,
   }) {
     return Task(
       id: id ?? this.id,
@@ -42,6 +45,7 @@ class Task {
       category: category ?? this.category,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      completedAt: completedAt ?? this.completedAt,
     );
   }
 

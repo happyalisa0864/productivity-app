@@ -28,14 +28,56 @@ class StatisticsPage extends ConsumerWidget {
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (tasks) {
           final completedTasks = tasks.where((t) => t.isCompleted).toList();
-          final totalTasks = tasks.length;
-          final totalTimeSpent = completedTasks.fold<int>(
+          
+          // Calculate total time within time limit
+          // If completed within time limit (remainingSeconds >= 0), count actual time spent
+          // If went into overtime (remainingSeconds < 0), count only up to the time limit
+          final totalTimeBeforeOvertime = completedTasks.fold<int>(
             0,
-            (sum, task) => sum + (task.totalSeconds - task.remainingSeconds),
+            (sum, task) {
+              if (task.remainingSeconds >= 0) {
+                // Completed within time limit - count actual time spent
+                return sum + (task.totalSeconds - task.remainingSeconds);
+              } else {
+                // Went into overtime - count only the time limit
+                return sum + task.totalSeconds;
+              }
+            },
           );
-          final averageTime = completedTasks.isEmpty
-              ? 0
-              : totalTimeSpent ~/ completedTasks.length;
+          
+          // Calculate total overtime time (sum of negative remainingSeconds)
+          final totalOvertime = completedTasks.fold<int>(
+            0,
+            (sum, task) {
+              // If remainingSeconds is negative, that's overtime
+              if (task.remainingSeconds < 0) {
+                final overtime = task.remainingSeconds.abs();
+                return sum + overtime;
+              }
+              return sum;
+            },
+          );
+
+          // Calculate time limit accuracy percentage
+          final totalTimeSpent = totalTimeBeforeOvertime + totalOvertime;
+          final accuracyPercentage = totalTimeSpent > 0
+              ? (totalTimeBeforeOvertime / totalTimeSpent * 100)
+              : 100.0;
+
+          // Calculate weekly completions
+          final now = DateTime.now();
+          // Get start of current week (Monday)
+          final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+          final startOfWeekDate = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+          final endOfWeekDate = startOfWeekDate.add(const Duration(days: 7));
+          
+          final weeklyCompletedTasks = completedTasks.where((task) {
+            if (task.completedAt == null) return false;
+            final completedAt = task.completedAt!;
+            // Include tasks completed from start of week (inclusive) to end of week (exclusive)
+            return (completedAt.isAtSameMomentAs(startOfWeekDate) || completedAt.isAfter(startOfWeekDate)) && 
+                   completedAt.isBefore(endOfWeekDate);
+          }).length;
 
           // Group by category
           final categoryStats = <String, int>{};
@@ -55,8 +97,8 @@ class StatisticsPage extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: _StatCard(
-                        title: 'Tasks Completed',
-                        value: completedTasks.length.toString(),
+                        title: 'Tasks Completed This Week',
+                        value: weeklyCompletedTasks.toString(),
                         icon: Icons.check_circle,
                         color: accent,
                       ),
@@ -64,8 +106,8 @@ class StatisticsPage extends ConsumerWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _StatCard(
-                        title: 'Total Time',
-                        value: formatSeconds(totalTimeSpent),
+                        title: 'Total Time (Within Time Limit)',
+                        value: formatSeconds(totalTimeBeforeOvertime),
                         icon: Icons.timer,
                         color: const Color(0xFFB2C8BA),
                       ),
@@ -77,8 +119,8 @@ class StatisticsPage extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: _StatCard(
-                        title: 'Average Time',
-                        value: formatSeconds(averageTime),
+                        title: 'Total Overtime',
+                        value: formatSeconds(totalOvertime),
                         icon: Icons.trending_up,
                         color: const Color(0xFFD7CDE9),
                       ),
@@ -86,9 +128,9 @@ class StatisticsPage extends ConsumerWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _StatCard(
-                        title: 'Total Tasks',
-                        value: totalTasks.toString(),
-                        icon: Icons.list,
+                        title: 'Time Limit Accuracy',
+                        value: '${accuracyPercentage.toStringAsFixed(1)}%',
+                        icon: Icons.track_changes,
                         color: const Color(0xFFFADCD9),
                       ),
                     ),

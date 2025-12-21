@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:productivity_app/features/core/utils/time_format.dart';
 import 'package:productivity_app/features/task_tracking/presentation/providers/task_providers.dart';
-import 'package:productivity_app/features/core/presentation/pages/main_navigation.dart';
+import 'package:productivity_app/features/task_tracking/presentation/pages/tasks_page.dart';
 import 'package:productivity_app/features/task_tracking/presentation/pages/timer_page.dart';
 
 class TaskCompletionSummary extends ConsumerWidget {
@@ -53,7 +53,7 @@ class TaskCompletionSummary extends ConsumerWidget {
                     onPressed: () {
                       Navigator.of(context).pushAndRemoveUntil(
                         MaterialPageRoute(
-                          builder: (_) => const MainNavigation(),
+                          builder: (_) => const TasksPage(),
                         ),
                         (route) => false,
                       );
@@ -185,10 +185,10 @@ class TaskCompletionSummary extends ConsumerWidget {
                                     (route) => false,
                                   );
                                 } else {
-                                  // No more tasks, go to main navigation
+                                  // No more tasks, go to tasks page
                                   Navigator.of(context).pushAndRemoveUntil(
                                     MaterialPageRoute(
-                                      builder: (_) => const MainNavigation(),
+                                      builder: (_) => const TasksPage(),
                                     ),
                                     (route) => false,
                                   );
@@ -221,7 +221,7 @@ class TaskCompletionSummary extends ConsumerWidget {
                               onPressed: () {
                                 Navigator.of(context).pushAndRemoveUntil(
                                   MaterialPageRoute(
-                                    builder: (_) => const MainNavigation(),
+                                    builder: (_) => const TasksPage(),
                                   ),
                                   (route) => false,
                                 );

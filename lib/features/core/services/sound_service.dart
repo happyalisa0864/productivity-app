@@ -18,30 +18,21 @@ class SoundService {
       await Future.delayed(const Duration(milliseconds: 100));
       await HapticFeedback.heavyImpact();
       
-      // Play a system notification sound
+      // Play the completion sound from assets
       try {
-        // Use a simple, reliable notification sound URL
-        // This is a short completion/achievement sound
-        await _player.play(UrlSource('https://www.soundjay.com/misc/sounds/bell-ringing-05.wav'));
-        // Let it play briefly then stop
-        await Future.delayed(const Duration(milliseconds: 800));
+        await _player.play(AssetSource('assets/sounds/calm-loop-80576.mp3'));
+        // Let the sound play (it's a loop, so we'll stop it after a reasonable duration)
+        await Future.delayed(const Duration(seconds: 3));
         await _player.stop();
       } catch (e) {
-        // If that fails, try an alternative sound
-        try {
-          await _player.play(UrlSource('https://www.zapsplat.com/wp-content/uploads/2015/sound-effects-one/notification_bell_001.mp3'));
-          await Future.delayed(const Duration(milliseconds: 800));
-          await _player.stop();
-        } catch (e2) {
-          // If all else fails, at least we have haptics which provide tactile feedback
-          print('Could not play audio sound, using haptics only: $e2');
-        }
+        print('Could not play completion sound: $e');
+        // Haptics still provide feedback even if sound fails
       }
     } catch (e) {
       print('Could not play completion sound: $e');
     } finally {
       // Reset after a delay to allow sound to play
-      Future.delayed(const Duration(seconds: 1), () {
+      Future.delayed(const Duration(seconds: 4), () {
         _isPlaying = false;
       });
     }

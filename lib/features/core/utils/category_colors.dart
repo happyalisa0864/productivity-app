@@ -4,7 +4,10 @@ class CategoryColors {
   static Color getColorForCategory(String? category) {
     if (category == null) return const Color(0xFFD7CDE9); // Default lavender
     
-    switch (category.toLowerCase()) {
+    // Normalize category: trim whitespace and convert to lowercase for consistent matching
+    final normalized = category.trim().toLowerCase();
+    
+    switch (normalized) {
       case 'work':
         return const Color(0xFFE6C0C0); // Soft coral
       case 'study':

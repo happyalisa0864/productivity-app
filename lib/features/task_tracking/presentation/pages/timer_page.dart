@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:productivity_app/features/core/utils/time_format.dart';
 import 'package:productivity_app/features/task_tracking/domain/entities/task.dart';
 import 'package:productivity_app/features/task_tracking/presentation/providers/task_providers.dart';
-import 'package:productivity_app/features/task_tracking/presentation/providers/completion_providers.dart';
-import 'package:productivity_app/features/task_tracking/presentation/pages/task_completion_summary.dart';
 
 class TimerPage extends ConsumerStatefulWidget {
   final String taskId;
@@ -17,32 +15,11 @@ class TimerPage extends ConsumerStatefulWidget {
 }
 
 class _TimerPageState extends ConsumerState<TimerPage> {
-  bool _hasNavigated = false;
-  bool _wasRunning = false;
 
   @override
   Widget build(BuildContext context) {
     final taskAsync = ref.watch(taskByIdProvider(widget.taskId));
     final notifier = ref.read(taskNotifierProvider.notifier);
-    final completion = ref.watch(taskCompletionProvider);
-    
-    // Check for completion via completion provider (primary method)
-    if (completion != null && completion.taskId == widget.taskId && !_hasNavigated && mounted) {
-      _hasNavigated = true;
-      // Use a microtask to ensure navigation happens after build
-      Future.microtask(() {
-        if (!mounted) return;
-        ref.read(taskCompletionProvider.notifier).clear();
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => TaskCompletionSummary(
-              taskId: completion.taskId,
-              timeSpent: completion.timeSpent,
-            ),
-          ),
-        );
-      });
-    }
 
     // Also check task state directly as a fallback
     return PopScope(
@@ -70,32 +47,6 @@ class _TimerPageState extends ConsumerState<TimerPage> {
             );
           }
           
-          // Check if task just completed (was running, now completed with 0 remaining)
-          if (_wasRunning && 
-              !task.isRunning && 
-              task.isCompleted && 
-              task.remainingSeconds == 0 && 
-              !_hasNavigated && 
-              mounted) {
-            // Task just completed - calculate time spent and navigate
-            final timeSpent = task.totalSeconds; // Time spent = total time since it's complete
-            _hasNavigated = true;
-            Future.microtask(() {
-              if (!mounted) return;
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (_) => TaskCompletionSummary(
-                    taskId: task.id,
-                    timeSpent: timeSpent,
-                  ),
-                ),
-              );
-            });
-          }
-          
-          // Track if task was running
-          _wasRunning = task.isRunning;
-          
           return _TimerScaffold(
             task: task,
             onToggleRun: () {
@@ -105,11 +56,75 @@ class _TimerPageState extends ConsumerState<TimerPage> {
                 notifier.startTimer(task.id);
               }
             },
-            onReset: () {
-              notifier.updateTask(
-                id: task.id,
-                minutes: (task.totalSeconds / 60).round(),
+            onDone: () async {
+              // Show confirmation dialog
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Complete Task'),
+                  content: const Text('Have you finished this task?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Yes'),
+                    ),
+                  ],
+                ),
               );
+
+              if (confirmed == true && mounted) {
+                // Mark task as complete
+                await notifier.toggleComplete(task.id);
+                
+                // Find the next incomplete task
+                final allTasks = ref.read(taskNotifierProvider).value ?? <Task>[];
+                final incompleteTasks = allTasks.where((t) => !t.isCompleted).toList();
+                
+                // Find the next task after the current one
+                Task? nextTask;
+                final currentIndex = allTasks.indexWhere((t) => t.id == task.id);
+                if (currentIndex != -1) {
+                  // Look for next incomplete task after current
+                  for (int i = currentIndex + 1; i < allTasks.length; i++) {
+                    if (!allTasks[i].isCompleted) {
+                      nextTask = allTasks[i];
+                      break;
+                    }
+                  }
+                  // If no task found after current, look from the beginning
+                  if (nextTask == null) {
+                    for (int i = 0; i < currentIndex; i++) {
+                      if (!allTasks[i].isCompleted) {
+                        nextTask = allTasks[i];
+                        break;
+                      }
+                    }
+                  }
+                } else if (incompleteTasks.isNotEmpty) {
+                  // Fallback: just get the first incomplete task
+                  nextTask = incompleteTasks.first;
+                }
+                
+                if (mounted) {
+                  if (nextTask != null) {
+                    // Navigate to next task's timer and start it
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => TimerPage(taskId: nextTask!.id),
+                      ),
+                    );
+                    // Start the timer for the next task
+                    notifier.startTimer(nextTask.id);
+                  } else {
+                    // No more incomplete tasks, go back to tasks page
+                    Navigator.of(context).pop();
+                  }
+                }
+              }
             },
             onClose: () async {
               // Pause before closing
@@ -128,13 +143,13 @@ class _TimerPageState extends ConsumerState<TimerPage> {
 class _TimerScaffold extends StatelessWidget {
   final Task task;
   final VoidCallback onToggleRun;
-  final VoidCallback onReset;
+  final VoidCallback onDone;
   final VoidCallback onClose;
 
   const _TimerScaffold({
     required this.task,
     required this.onToggleRun,
-    required this.onReset,
+    required this.onDone,
     required this.onClose,
   });
 
@@ -145,7 +160,9 @@ class _TimerScaffold extends StatelessWidget {
     final textColor = const Color(0xFF4E4A47);
 
     final timeText = formatSeconds(task.remainingSeconds);
-    final progress = task.progress.clamp(0.0, 1.0);
+    final isOvertime = task.remainingSeconds < 0;
+    // For overtime, show progress as complete (full circle)
+    final progress = isOvertime ? 1.0 : task.progress.clamp(0.0, 1.0);
 
     return Scaffold(
       backgroundColor: background,
@@ -160,11 +177,16 @@ class _TimerScaffold extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const SizedBox(width: 40),
-                  Text(
-                    'Focus Timer',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                  Expanded(
+                    child: Text(
+                      task.title,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
                   ),
                   IconButton(
                     onPressed: onClose,
@@ -196,13 +218,13 @@ class _TimerScaffold extends StatelessWidget {
                               color: accent.withOpacity(0.18),
                             ),
                           ),
-                          // Progress ring with rounded ends
+                          // Progress ring with rounded ends - red when in overtime
                           CustomPaint(
                             size: const Size(300, 300),
                             painter: _CircularProgressPainter(
                               progress: progress == 0 ? 0 : progress,
                               strokeWidth: 24,
-                              color: accent,
+                              color: isOvertime ? Colors.red : accent,
                             ),
                           ),
                           Text(
@@ -213,7 +235,7 @@ class _TimerScaffold extends StatelessWidget {
                                 ?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 64,
-                                  color: textColor,
+                                  color: isOvertime ? Colors.red : textColor,
                                 ),
                           ),
                         ],
@@ -236,9 +258,9 @@ class _TimerScaffold extends StatelessWidget {
                           style: ElevatedButton.styleFrom(
                             shape: const CircleBorder(),
                             padding: const EdgeInsets.all(20),
-                            backgroundColor: accent,
-                            foregroundColor: Colors.white,
-                            elevation: 4,
+                            backgroundColor: Colors.white,
+                            foregroundColor: textColor.withOpacity(0.75),
+                            elevation: 0,
                           ),
                           child: Icon(
                             task.isRunning ? Icons.pause : Icons.play_arrow,
@@ -247,83 +269,17 @@ class _TimerScaffold extends StatelessWidget {
                         ),
                         const SizedBox(width: 24),
                         ElevatedButton(
-                          onPressed: onReset,
+                          onPressed: onDone,
                           style: ElevatedButton.styleFrom(
                             shape: const CircleBorder(),
                             padding: const EdgeInsets.all(16),
-                            backgroundColor: Colors.white,
-                            foregroundColor: textColor.withOpacity(0.75),
-                            elevation: 0,
+                            backgroundColor: accent,
+                            foregroundColor: Colors.white,
+                            elevation: 4,
                           ),
-                          child: const Icon(Icons.replay, size: 26),
+                          child: const Icon(Icons.check, size: 26),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 24),
-                    // Current task card
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Current Task',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: textColor,
-                                  ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              task.title,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: textColor.withOpacity(0.8),
-                                  ),
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: onClose,
-                                icon: const Icon(Icons.skip_next),
-                                label: const Text('Back to Tasks'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: textColor,
-                                  side: BorderSide(
-                                    color: textColor.withOpacity(0.1),
-                                  ),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ),
                     const SizedBox(height: 24),
                   ],

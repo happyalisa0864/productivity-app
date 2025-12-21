@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 class AddTaskResult {
   final String title;
   final int minutes;
-  final String? description;
-  const AddTaskResult(this.title, this.minutes, this.description);
+  final String? category;
+  const AddTaskResult(this.title, this.minutes, this.category);
 }
 
 class AddTaskDialog extends StatefulWidget {
@@ -17,15 +17,43 @@ class AddTaskDialog extends StatefulWidget {
 class _AddTaskDialogState extends State<AddTaskDialog> {
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
-  final _descriptionCtrl = TextEditingController();
   int _selectedHours = 0;
   int _selectedMinutes = 20;
+  String? _selectedCategory;
+
+  static const List<String> _categoryOptions = [
+    'Work',
+    'Study',
+    'Personal',
+    'Health',
+    'Other',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategory = _categoryOptions.first; // Default to first category
+  }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
-    _descriptionCtrl.dispose();
     super.dispose();
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'work':
+        return Icons.work;
+      case 'study':
+        return Icons.school;
+      case 'personal':
+        return Icons.person;
+      case 'health':
+        return Icons.favorite;
+      default:
+        return Icons.category;
+    }
   }
 
   void _submit() {
@@ -33,7 +61,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     final title = _titleCtrl.text.trim();
     final totalMinutes = (_selectedHours * 60) + _selectedMinutes;
     Navigator.of(context).pop(
-      AddTaskResult(title, totalMinutes, _descriptionCtrl.text.trim().isEmpty ? null : _descriptionCtrl.text.trim()),
+      AddTaskResult(title, totalMinutes, _selectedCategory),
     );
   }
 
@@ -89,13 +117,70 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                             (v == null || v.trim().isEmpty) ? 'Enter a task name' : null,
                       ),
                       const SizedBox(height: 20),
-                      // Description input
-                      _InputField(
-                        label: 'Description (optional)',
-                        controller: _descriptionCtrl,
-                        hintText: 'Add more details...',
-                        backgroundColor: inputColor,
-                        maxLines: 4,
+                      // Category selection
+                      Text(
+                        'Category',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Select Category'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: _categoryOptions.map((category) {
+                                  return ListTile(
+                                    leading: Icon(_getCategoryIcon(category)),
+                                    title: Text(category),
+                                    onTap: () {
+                                      setState(() => _selectedCategory = category);
+                                      Navigator.of(context).pop();
+                                    },
+                                    selected: _selectedCategory == category,
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: inputColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                _getCategoryIcon(_selectedCategory ?? 'Work'),
+                                color: textColor,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _selectedCategory ?? 'Work',
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                              const Icon(
+                                Icons.arrow_forward_ios,
+                                size: 16,
+                                color: Color(0xFF4E4A47),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 24),
                       // Time limit section
@@ -232,7 +317,6 @@ class _InputField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
   final Color backgroundColor;
-  final int maxLines;
   final String? Function(String?)? validator;
 
   const _InputField({
@@ -240,7 +324,6 @@ class _InputField extends StatelessWidget {
     required this.controller,
     required this.hintText,
     required this.backgroundColor,
-    this.maxLines = 1,
     this.validator,
   });
 
@@ -261,7 +344,6 @@ class _InputField extends StatelessWidget {
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
-          maxLines: maxLines,
           validator: validator,
           decoration: InputDecoration(
             hintText: hintText,

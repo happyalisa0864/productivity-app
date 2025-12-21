@@ -27,10 +27,10 @@ class TaskTile extends StatelessWidget {
     final time = formatSeconds(task.remainingSeconds);
     final isCompleted = task.isCompleted;
 
-    // Use category color if available, otherwise default
-    final badgeColor = isCompleted
-        ? const Color(0xFFB2C8BA) // greenish tag for completed
-        : CategoryColors.getColorForCategory(task.category);
+    // Use category color for time limit pill
+    // Background color stays the same regardless of completion status
+    final categoryColor = CategoryColors.getColorForCategory(task.category);
+    final badgeColor = categoryColor;
 
     return Card(
       child: Padding(
@@ -100,13 +100,16 @@ class TaskTile extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: badgeColor.withOpacity(0.6),
+                        color: badgeColor,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
                         '${(task.totalSeconds / 60).round()} min',
                         style: theme.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w600,
+                          color: isCompleted
+                              ? const Color(0xFF4E4A47).withOpacity(0.5) // Lighter text for completed tasks
+                              : const Color(0xFF4E4A47), // Dark gray text for readability
                         ),
                       ),
                     ),

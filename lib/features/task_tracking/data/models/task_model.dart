@@ -12,6 +12,7 @@ class TaskModel {
   final String? category;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? completedAt;
 
   const TaskModel({
     required this.id,
@@ -23,6 +24,7 @@ class TaskModel {
     this.category,
     required this.createdAt,
     required this.updatedAt,
+    this.completedAt,
   });
 
   factory TaskModel.fromEntity(Task e) => TaskModel(
@@ -35,6 +37,7 @@ class TaskModel {
         category: e.category,
         createdAt: e.createdAt,
         updatedAt: e.updatedAt,
+        completedAt: e.completedAt,
       );
 
   Task toEntity() => Task(
@@ -47,6 +50,7 @@ class TaskModel {
         category: category,
         createdAt: createdAt,
         updatedAt: updatedAt,
+        completedAt: completedAt,
       );
 
   Map<String, dynamic> toMap() => {
@@ -59,6 +63,7 @@ class TaskModel {
         'category': category,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
+        'completedAt': completedAt?.toIso8601String(),
       };
 
   factory TaskModel.fromMap(Map<String, dynamic> map) => TaskModel(
@@ -71,6 +76,9 @@ class TaskModel {
         category: map['category'] == null ? null : map['category'] as String,
         createdAt: DateTime.parse(map['createdAt'] as String),
         updatedAt: DateTime.parse(map['updatedAt'] as String),
+        completedAt: map['completedAt'] == null
+            ? null
+            : DateTime.parse(map['completedAt'] as String),
       );
 
   String toJson() => jsonEncode(toMap());
