@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../Downloads/stitch_task_completion_summary/main_timer_screen"
+		},
+		{
+			"path": "../../Downloads/stitch_task_completion_summary/settings_screen"
+		},
+		{
+			"path": "../../Downloads/stitch_task_completion_summary/task_completion_summary"
+		},
+		{
+			"path": "../../Downloads/stitch_task_completion_summary/to-do_list_management"
+		}
+	],
+	"settings": {}
+}
