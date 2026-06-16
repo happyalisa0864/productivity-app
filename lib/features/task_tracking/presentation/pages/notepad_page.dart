@@ -39,6 +39,7 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
     });
   }
 
+  // AI ASSISTANCE FROM CURSOR AGENT USED FOR AUTOSAVE FUNCTION
   @override
   void dispose() {
     _saveTimer?.cancel();
@@ -48,7 +49,6 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
     super.dispose();
   }
 
-  // ~~ AUTOSAVE FUNCTION UTILIZED AI ASSISTANCE FROM CURSOR AGENT ~~
   // Loading previously saved title and body from device storage
   Future<void> _loadNotepadContent() async {
     try {
