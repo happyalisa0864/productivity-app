@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:productivity_app/features/welcome/presentation/pages/app_entry.dart';
+import 'package:productivity_app/features/task_tracking/presentation/pages/tasks_page.dart';
 
 void main() {
   runApp(const ProviderScope(child: MyApp()));
@@ -44,8 +44,9 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      home: const AppEntry(),
+      home: const TasksPage(),
     );
   }
 }
+
 

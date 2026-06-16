@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:productivity_app/features/core/providers.dart';
+import 'package:productivity_app/features/task_tracking/data/models/task_statistics_model.dart';
 import 'package:productivity_app/features/task_tracking/domain/entities/task.dart';
 import 'package:productivity_app/features/task_tracking/domain/repositories/task_repository.dart';
 import 'package:uuid/uuid.dart';
@@ -11,7 +13,6 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
   Timer? _timer;
   String? _runningTaskId;
   int _tickCountSinceLastPersist = 0;
-  DateTime? _timerStartTime;
 
   TaskNotifier.loading()
       : _repo = null,
@@ -80,6 +81,26 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     await _persist(<Task>[]);
   }
 
+  Future<void> reorderTasks(int oldIndex, int newIndex) async {
+    final list = [...(state.value ?? <Task>[])];
+    
+    // Adjust newIndex if moving down the list
+    // This is required by ReorderableListView's behavior
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    
+    // Perform the reorder
+    final task = list.removeAt(oldIndex);
+    list.insert(newIndex, task);
+    
+    // Update all tasks with new updatedAt timestamp to preserve order
+    final updatedList = list.map((t) => t.copyWith(updatedAt: DateTime.now())).toList();
+    
+    state = AsyncData(updatedList);
+    await _persist(updatedList);
+  }
+
   Future<void> toggleComplete(String id) async {
     final list = [...(state.value ?? <Task>[])];
     final idx = list.indexWhere((t) => t.id == id);
@@ -117,26 +138,72 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
         final finalIdx = finalList.indexWhere((t) => t.id == id);
         if (finalIdx != -1) {
           final finalTask = finalList[finalIdx];
+          final completedAt = completed ? DateTime.now() : null;
           finalList[finalIdx] = finalTask.copyWith(
             isCompleted: completed,
             isRunning: false,
             updatedAt: DateTime.now(),
-            completedAt: completed ? DateTime.now() : null,
+            completedAt: completedAt,
           );
           state = AsyncData(finalList);
           await _persist(finalList);
+          
+          // Save or remove statistics based on completion status
+          if (_ref != null) {
+            try {
+              final statsDataSource = await _ref!.read(statisticsDataSourceProvider.future);
+              if (completed && completedAt != null) {
+                // Save statistics when task is completed
+                await statsDataSource.saveStatistics(
+                  TaskStatisticsModel(
+                    taskId: id,
+                    completedAt: completedAt,
+                    totalSeconds: finalTask.totalSeconds,
+                    remainingSeconds: finalTask.remainingSeconds,
+                    category: finalTask.category,
+                  ),
+                );
+              } else {
+                // Remove statistics when task is uncompleted
+                await statsDataSource.removeStatisticsForTask(id);
+              }
+            } catch (_) {}
+          }
           return;
         }
       }
     }
+    final completedAt = completed ? DateTime.now() : null;
     list[idx] = t.copyWith(
       isCompleted: completed,
       isRunning: false,
       updatedAt: DateTime.now(),
-      completedAt: completed ? DateTime.now() : null,
+      completedAt: completedAt,
     );
     state = AsyncData(list);
     await _persist(list);
+    
+    // Save or remove statistics based on completion status
+    if (_ref != null) {
+      try {
+        final statsDataSource = await _ref!.read(statisticsDataSourceProvider.future);
+        if (completed && completedAt != null) {
+          // Save statistics when task is completed
+          await statsDataSource.saveStatistics(
+            TaskStatisticsModel(
+              taskId: id,
+              completedAt: completedAt,
+              totalSeconds: t.totalSeconds,
+              remainingSeconds: t.remainingSeconds,
+              category: t.category,
+            ),
+          );
+        } else {
+          // Remove statistics when task is uncompleted
+          await statsDataSource.removeStatisticsForTask(id);
+        }
+      } catch (_) {}
+    }
   }
 
   Future<void> startTimer(String id) async {
@@ -152,7 +219,6 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     if (task.isCompleted) return; // do not start completed tasks
 
     _runningTaskId = id;
-    _timerStartTime = DateTime.now();
     // If task was paused (not running and has remaining time), continue from where it left off
     // Otherwise, reset to totalSeconds (covers: never started, or time limit was just edited)
     final wasPaused = !task.isRunning && task.remainingSeconds < task.totalSeconds;

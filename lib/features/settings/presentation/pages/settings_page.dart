@@ -1,5 +1,9 @@
+// Settings screen with links to statistics, help, feedback, and app rating.
+// Opened from the tasks page app bar (not the bottom nav in current flow).
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:in_app_review/in_app_review.dart';
 import 'package:productivity_app/features/task_tracking/presentation/pages/statistics_page.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -32,7 +36,7 @@ class SettingsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 16),
         children: [
-          // Statistics Section
+          // Opens the weekly statistics breakdown page
           _SectionHeader(title: 'Statistics'),
           _SettingsCard(
             children: [
@@ -49,23 +53,39 @@ class SettingsPage extends StatelessWidget {
                 trailing: Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
-                  color: textColor.withOpacity(0.5),
+                  color: textColor.withValues(alpha: 0.5),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 24),
-          // Support & Feedback Section
+          // External links: Google Forms help/feedback and in-app review
           _SectionHeader(title: 'Support & Feedback'),
           _SettingsCard(
             children: [
               _SettingsItem(
                 icon: Icons.help_center,
                 title: 'Help Center',
+                onTap: () async {
+                  final Uri url = Uri.parse(
+                    'https://docs.google.com/forms/d/e/1FAIpQLSdNbAcPYqY71YoEdY3k43VUPDsGoP6_SjJC1hH6akhUJo-t-A/viewform?usp=publish-editor',
+                  );
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Could not open help center'),
+                        ),
+                      );
+                    }
+                  }
+                },
                 trailing: Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
-                  color: textColor.withOpacity(0.5),
+                  color: textColor.withValues(alpha: 0.5),
                 ),
               ),
               _Divider(),
@@ -91,17 +111,41 @@ class SettingsPage extends StatelessWidget {
                 trailing: Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
-                  color: textColor.withOpacity(0.5),
+                  color: textColor.withValues(alpha: 0.5),
                 ),
               ),
               _Divider(),
               _SettingsItem(
                 icon: Icons.star,
                 title: 'Rate the App',
+                onTap: () async {
+                  final InAppReview inAppReview = InAppReview.instance;
+                  if (await inAppReview.isAvailable()) {
+                    inAppReview.requestReview();
+                  } else {
+                    // Fallback: open app store page
+                    final Uri url = Uri.parse(
+                      Platform.isIOS
+                          ? 'https://apps.apple.com/app/idYOUR_APP_ID' // TODO: Replace with your App Store ID
+                          : 'https://play.google.com/store/apps/details?id=com.example.productivity_app', // TODO: Replace with your package name
+                    );
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Could not open app store'),
+                          ),
+                        );
+                      }
+                    }
+                  }
+                },
                 trailing: Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
-                  color: textColor.withOpacity(0.5),
+                  color: textColor.withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -112,7 +156,7 @@ class SettingsPage extends StatelessWidget {
             child: Text(
               'Version 1.0.0',
               style: TextStyle(
-                color: textColor.withOpacity(0.5),
+                color: textColor.withValues(alpha: 0.5),
                 fontSize: 12,
               ),
             ),
@@ -124,6 +168,7 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
+// Section title above each group of settings rows.
 class _SectionHeader extends StatelessWidget {
   final String title;
   const _SectionHeader({required this.title});
@@ -136,7 +181,7 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: TextStyle(
-          color: textColor.withOpacity(0.8),
+          color: textColor.withValues(alpha: 0.8),
           fontSize: 18,
           fontWeight: FontWeight.w600,
         ),
@@ -145,6 +190,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+// Rounded cream card that groups related settings items.
 class _SettingsCard extends StatelessWidget {
   final List<Widget> children;
   const _SettingsCard({required this.children});
@@ -165,6 +211,7 @@ class _SettingsCard extends StatelessWidget {
   }
 }
 
+// Single tappable row with icon, label, and trailing chevron.
 class _SettingsItem extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -191,7 +238,7 @@ class _SettingsItem extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: primary.withOpacity(0.2),
+              color: primary.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -219,6 +266,7 @@ class _SettingsItem extends StatelessWidget {
   }
 }
 
+// Thin divider between items inside a settings card.
 class _Divider extends StatelessWidget {
   const _Divider();
 
@@ -228,7 +276,7 @@ class _Divider extends StatelessWidget {
       height: 1,
       thickness: 1,
       indent: 76,
-      color: Colors.black.withOpacity(0.05),
+      color: Colors.black.withValues(alpha: 0.05),
     );
   }
 }

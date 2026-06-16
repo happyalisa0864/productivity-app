@@ -1,4 +1,5 @@
-import 'dart:async';
+// Edit screen for an existing task's name, time limit, and category.
+// Also allows deleting the task. Opened by tapping edit on a task tile.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:productivity_app/features/task_tracking/domain/entities/task.dart';
@@ -19,7 +20,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
   int _selectedMinutes = 0;
   String? _selectedCategory;
   bool _isInitialized = false;
-  String? _lastTaskId;
+  String? _lastTaskId; // Tracks which task the form fields were loaded from
 
   static const List<String> _categoryOptions = [
     'Work',
@@ -41,6 +42,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
     super.dispose();
   }
 
+  // Populates form fields from the task data (only once per task).
   void _initFromTask(Task t) {
     if (!mounted) return;
     // Only initialize if this is a new task or not yet initialized
@@ -55,6 +57,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
     }
   }
 
+  // Maps category names to icons for the category picker.
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
       case 'work':
@@ -70,6 +73,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
     }
   }
 
+  // Validates the form and saves changes back to the task notifier.
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final notifier = ref.read(taskNotifierProvider.notifier);
@@ -82,7 +86,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
         ? (currentTask.totalSeconds / 60).round() 
         : null;
     
-    // Only pass minutes if the time limit actually changed
+    // Only update the time limit if the user actually changed it
     final int? minutesToUpdate = (currentTotalMinutes != null && totalMinutes != currentTotalMinutes)
         ? totalMinutes
         : null;
@@ -97,6 +101,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
     Navigator.of(context).pop();
   }
 
+  // Shows a confirmation dialog before permanently deleting the task.
   Future<void> _confirmDelete() async {
     final notifier = ref.read(taskNotifierProvider.notifier);
     final confirmed = await showDialog<bool>(
@@ -134,7 +139,23 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
     return taskAsync.when(
       loading: () => Scaffold(
         backgroundColor: backgroundColor,
-        body: const Center(child: CircularProgressIndicator()),
+        appBar: AppBar(
+          backgroundColor: backgroundColor,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: textColor),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: Text(
+            'Edit Task',
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          centerTitle: true,
+        ),
+        body: const SizedBox.shrink(),
       ),
       error: (e, _) => Scaffold(
         backgroundColor: backgroundColor,
@@ -387,6 +408,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
   }
 }
 
+// Pink uppercase label above each form section (e.g. "TASK NAME").
 class _SectionLabel extends StatelessWidget {
   final String label;
   const _SectionLabel(this.label);
@@ -405,6 +427,7 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
+// Scroll wheel picker for hours or minutes in the time limit section.
 class _TimePicker extends StatefulWidget {
   final int value;
   final int maxValue;

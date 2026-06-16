@@ -33,11 +33,16 @@ class TaskTile extends StatelessWidget {
     final badgeColor = categoryColor;
 
     return Card(
-      child: Padding(
+      child: Opacity(
+        opacity: isCompleted ? 0.6 : 1.0,
+        child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // Drag handle (6 dots in 2x3 formation)
+            _DragHandle(),
+            const SizedBox(width: 8),
             // Checkbox
             GestureDetector(
               onTap: () {
@@ -88,9 +93,11 @@ class TaskTile extends StatelessWidget {
                       style: theme.textTheme.titleMedium?.copyWith(
                         decoration:
                             isCompleted ? TextDecoration.lineThrough : null,
+                        decorationThickness: isCompleted ? 2.0 : null,
                         color: isCompleted
                             ? Colors.grey.shade500
                             : theme.textTheme.titleMedium?.color,
+                        fontWeight: isCompleted ? FontWeight.normal : FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -108,7 +115,7 @@ class TaskTile extends StatelessWidget {
                         style: theme.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: isCompleted
-                              ? const Color(0xFF4E4A47).withOpacity(0.5) // Lighter text for completed tasks
+                              ? const Color(0xFF4E4A47).withValues(alpha: 0.5) // Lighter text for completed tasks
                               : const Color(0xFF4E4A47), // Dark gray text for readability
                         ),
                       ),
@@ -126,6 +133,7 @@ class TaskTile extends StatelessWidget {
                   icon: Icon(
                     task.isRunning ? Icons.pause : Icons.play_arrow,
                     size: 28,
+                    color: isCompleted ? Colors.grey.shade400 : null,
                   ),
                   onPressed: isCompleted
                       ? null
@@ -136,7 +144,7 @@ class TaskTile extends StatelessWidget {
                             onStart();
                           }
                         },
-                  tooltip: task.isRunning ? 'Pause' : 'Start',
+                  tooltip: isCompleted ? 'Task completed' : (task.isRunning ? 'Pause' : 'Start'),
                 ),
                 Text(
                   isCompleted ? 'Done' : time,
@@ -148,6 +156,66 @@ class TaskTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+      ),
+    );
+  }
+}
+
+class _DragHandle extends StatelessWidget {
+  const _DragHandle();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 20,
+      height: 20,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _Dot(),
+              const SizedBox(width: 3),
+              _Dot(),
+            ],
+          ),
+          const SizedBox(height: 3),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _Dot(),
+              const SizedBox(width: 3),
+              _Dot(),
+            ],
+          ),
+          const SizedBox(height: 3),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _Dot(),
+              const SizedBox(width: 3),
+              _Dot(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Dot extends StatelessWidget {
+  const _Dot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 3,
+      height: 3,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade400,
+        shape: BoxShape.circle,
       ),
     );
   }

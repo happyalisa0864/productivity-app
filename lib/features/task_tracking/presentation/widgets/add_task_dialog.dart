@@ -187,8 +187,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                       Text(
                         'Set Time Limit',
                         style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                           color: textColor,
                         ),
                       ),

@@ -1,9 +1,31 @@
+// Focus timer screen for a single task.
+// Shows a circular countdown, play/pause, and a done button that marks
+// the task complete and optionally moves to the next task.
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:productivity_app/features/core/utils/time_format.dart';
 import 'package:productivity_app/features/task_tracking/domain/entities/task.dart';
 import 'package:productivity_app/features/task_tracking/presentation/providers/task_providers.dart';
+
+// Helper function to create a page route that slides in from the left
+PageRoute<T> _createLeftSlideRoute<T extends Object?>(Widget page) {
+  return PageRouteBuilder<T>(
+    pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      const begin = Offset(-1.0, 0.0); // Start from left
+      const end = Offset.zero;
+      const curve = Curves.ease;
+
+      var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+
+      return SlideTransition(
+        position: animation.drive(tween),
+        child: child,
+      );
+    },
+  );
+}
 
 class TimerPage extends ConsumerStatefulWidget {
   final String taskId;
@@ -14,6 +36,7 @@ class TimerPage extends ConsumerStatefulWidget {
   ConsumerState<TimerPage> createState() => _TimerPageState();
 }
 
+// Watches the task by ID and renders the timer UI or handles navigation.
 class _TimerPageState extends ConsumerState<TimerPage> {
 
   @override
@@ -21,11 +44,10 @@ class _TimerPageState extends ConsumerState<TimerPage> {
     final taskAsync = ref.watch(taskByIdProvider(widget.taskId));
     final notifier = ref.read(taskNotifierProvider.notifier);
 
-    // Also check task state directly as a fallback
+    // Back gesture or system back pauses the timer before leaving
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) async {
-        // Auto-pause when leaving the timer screen
         if (!didPop) {
           await notifier.pauseTimer();
           if (mounted) {
@@ -35,7 +57,8 @@ class _TimerPageState extends ConsumerState<TimerPage> {
       },
       child: taskAsync.when(
         loading: () => const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
+          backgroundColor: Color(0xFFFAF7F5),
+          body: SizedBox.shrink(),
         ),
         error: (e, _) => Scaffold(
           body: Center(child: Text('Error: $e')),
@@ -57,7 +80,7 @@ class _TimerPageState extends ConsumerState<TimerPage> {
               }
             },
             onDone: () async {
-              // Show confirmation dialog
+              // Confirm before marking the task as complete
               final confirmed = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
@@ -77,10 +100,9 @@ class _TimerPageState extends ConsumerState<TimerPage> {
               );
 
               if (confirmed == true && mounted) {
-                // Mark task as complete
                 await notifier.toggleComplete(task.id);
-                
-                // Find the next incomplete task
+
+                // Find the next incomplete task in list order (wraps around)
                 final allTasks = ref.read(taskNotifierProvider).value ?? <Task>[];
                 final incompleteTasks = allTasks.where((t) => !t.isCompleted).toList();
                 
@@ -111,10 +133,10 @@ class _TimerPageState extends ConsumerState<TimerPage> {
                 
                 if (mounted) {
                   if (nextTask != null) {
-                    // Navigate to next task's timer and start it
+                    // Jump straight to the next task's timer and start it
                     Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (_) => TimerPage(taskId: nextTask!.id),
+                      _createLeftSlideRoute(
+                        TimerPage(taskId: nextTask!.id),
                       ),
                     );
                     // Start the timer for the next task
@@ -127,7 +149,6 @@ class _TimerPageState extends ConsumerState<TimerPage> {
               }
             },
             onClose: () async {
-              // Pause before closing
               await notifier.pauseTimer();
               if (mounted) {
                 Navigator.of(context).pop();
@@ -140,6 +161,7 @@ class _TimerPageState extends ConsumerState<TimerPage> {
   }
 }
 
+// The timer layout: title bar, circular progress ring, and control buttons.
 class _TimerScaffold extends StatelessWidget {
   final Task task;
   final VoidCallback onToggleRun;
@@ -161,7 +183,7 @@ class _TimerScaffold extends StatelessWidget {
 
     final timeText = formatSeconds(task.remainingSeconds);
     final isOvertime = task.remainingSeconds < 0;
-    // For overtime, show progress as complete (full circle)
+    // Ring fills completely when time runs out (overtime shown in red)
     final progress = isOvertime ? 1.0 : task.progress.clamp(0.0, 1.0);
 
     return Scaffold(
@@ -209,16 +231,16 @@ class _TimerScaffold extends StatelessWidget {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // Background ring
+                          // Faded background ring
                           CustomPaint(
                             size: const Size(300, 300),
                             painter: _CircularProgressPainter(
                               progress: 1.0,
                               strokeWidth: 24,
-                              color: accent.withOpacity(0.18),
+                              color: accent.withValues(alpha: 0.18),
                             ),
                           ),
-                          // Progress ring with rounded ends - red when in overtime
+                          // Active progress ring (red when in overtime)
                           CustomPaint(
                             size: const Size(300, 300),
                             painter: _CircularProgressPainter(
@@ -227,16 +249,43 @@ class _TimerScaffold extends StatelessWidget {
                               color: isOvertime ? Colors.red : accent,
                             ),
                           ),
-                          Text(
-                            timeText,
-                            style: Theme.of(context)
-                                .textTheme
-                                .displayMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 64,
-                                  color: isOvertime ? Colors.red : textColor,
-                                ),
+                          // Timer digits with a subtle outline for readability
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // White outline - draw text in multiple positions to create stroke
+                              ...List.generate(8, (index) {
+                                final angle = (index * math.pi * 2) / 8;
+                                final offsetX = math.cos(angle) * 2.5;
+                                final offsetY = math.sin(angle) * 2.5;
+                                return Transform.translate(
+                                  offset: Offset(offsetX, offsetY),
+                                  child: Text(
+                                    timeText,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .displayMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 64,
+                                          color: background, // White outline using background color
+                                        ),
+                                  ),
+                                );
+                              }),
+                              // Main text on top - color changes based on overtime
+                              Text(
+                                timeText,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .displayMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 64,
+                                      color: isOvertime ? Colors.red : textColor,
+                                    ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -245,7 +294,7 @@ class _TimerScaffold extends StatelessWidget {
                     Text(
                       'Focus Time',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: textColor.withOpacity(0.7),
+                            color: textColor.withValues(alpha: 0.7),
                           ),
                     ),
                     const SizedBox(height: 24),
@@ -259,7 +308,7 @@ class _TimerScaffold extends StatelessWidget {
                             shape: const CircleBorder(),
                             padding: const EdgeInsets.all(20),
                             backgroundColor: Colors.white,
-                            foregroundColor: textColor.withOpacity(0.75),
+                            foregroundColor: textColor.withValues(alpha: 0.75),
                             elevation: 0,
                           ),
                           child: Icon(
@@ -293,7 +342,7 @@ class _TimerScaffold extends StatelessWidget {
   }
 }
 
-// Custom painter for circular progress with rounded ends
+// Draws the circular progress arc with rounded stroke ends.
 class _CircularProgressPainter extends CustomPainter {
   final double progress;
   final double strokeWidth;

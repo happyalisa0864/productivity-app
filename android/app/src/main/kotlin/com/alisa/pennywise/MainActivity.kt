@@ -1,4 +1,4 @@
-package com.example.productivity_app
+package com.alisa.pennywise
 
 import io.flutter.embedding.android.FlutterActivity
 
