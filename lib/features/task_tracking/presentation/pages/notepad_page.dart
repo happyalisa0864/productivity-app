@@ -1,5 +1,4 @@
-// Simple notepad for free-form notes with a title and body
-// Content is saved automatically as the user types
+// Simple notepad for free-form notes with a title and body; content is saved automatically as the user types
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -14,11 +13,8 @@ class NotepadPage extends ConsumerStatefulWidget {
 }
 
 class _NotepadPageState extends ConsumerState<NotepadPage> {
-  // To save changes in the note
   static const String _titleKey = 'notepad_title';
   static const String _contentKey = 'notepad_content';
-
-  // Setting notepad color palette
   static const Color _background = Color(0xFFFAF7F5);
   static const Color _textColor = Color(0xFF4E4A47);
   static const Color _mutedText = Color(0xFF8B8680);
@@ -34,9 +30,7 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
     super.initState();
     _titleController = TextEditingController();
     _bodyController = TextEditingController();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadNotepadContent();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadNotepadContent());
   }
 
   // AI ASSISTANCE FROM CURSOR AGENT USED FOR AUTOSAVE FUNCTION
@@ -49,7 +43,6 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
     super.dispose();
   }
 
-  // Loading previously saved title and body from device storage
   Future<void> _loadNotepadContent() async {
     try {
       final prefs = await ref.read(sharedPreferencesProvider.future);
@@ -60,7 +53,6 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
     } catch (_) {}
   }
 
-  // Autosaves the current title and body
   Future<void> _saveNotepadContent() async {
     try {
       final prefs = await ref.read(sharedPreferencesProvider.future);
@@ -69,25 +61,20 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
     } catch (_) {}
   }
 
-  // Debounces saves so we don't save changes on every keystroke.
   void _scheduleSave() {
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(milliseconds: 500), _saveNotepadContent);
   }
 
-  // Formats today's date for display under the note title
   String _formatDate(DateTime date) {
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
-  // Putting everything together to build the notepad page!
   @override
   Widget build(BuildContext context) {
     final today = _formatDate(DateTime.now());
+    const titleStyle = TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: _textColor, height: 1.0);
 
     return Scaffold(
       backgroundColor: _background,
@@ -95,133 +82,78 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
         backgroundColor: _background,
         foregroundColor: _textColor,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Notepad',
-          style: TextStyle(
-            fontWeight: FontWeight.w400,
-            fontSize: 18,
-            color: _textColor,
-          ),
-        ),
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).pop()),
+        title: const Text('Notepad', style: TextStyle(fontWeight: FontWeight.w400, fontSize: 18, color: _textColor)),
         centerTitle: true,
         actions: [
-          // More options button to clear the note
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: _textColor),
             color: const Color(0xFFFDF2E8),
             onSelected: (value) {
               if (value == 'clear') {
-                setState(() {
-                  _titleController.clear();
-                  _bodyController.clear();
-                });
+                setState(() { _titleController.clear(); _bodyController.clear(); });
                 _saveNotepadContent();
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'clear',
-                child: Text('Clear note', style: TextStyle(color: _textColor)),
-              ),
+              const PopupMenuItem(value: 'clear', child: Text('Clear note', style: TextStyle(color: _textColor))),
             ],
           ),
         ],
       ),
       body: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextField(
-                        controller: _titleController,
-                        onChanged: (_) => _scheduleSave(),
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          color: _textColor,
-                          height: 1.0,
-                        ),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'Note Title',
-                          hintStyle: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: _mutedText,
-                            height: 1.0,
-                          ),
-                          contentPadding: EdgeInsets.zero,
-                          isDense: true,
-                          isCollapsed: true,
-                        ),
-                        maxLines: 1,
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
-                            size: 16,
-                            color: _rosePink.withValues(alpha: 0.85),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            today,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: _mutedText,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Expanded(
-                        child: TextField(
-                          controller: _bodyController,
-                          onChanged: (_) => _scheduleSave(),
-                          maxLines: null,
-                          expands: true,
-                          textAlignVertical: TextAlignVertical.top,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: _textColor,
-                            height: 1.6,
-                          ),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: 'Start writing your thoughts here...',
-                            hintStyle: TextStyle(
-                              fontSize: 16,
-                              color: _mutedText,
-                              height: 1.6,
-                            ),
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                        ),
-                      ),
-                    ],
+                TextField(
+                  controller: _titleController,
+                  onChanged: (_) => _scheduleSave(),
+                  style: titleStyle,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    hintText: 'Note Title',
+                    hintStyle: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: _mutedText, height: 1.0),
+                    contentPadding: EdgeInsets.zero,
+                    isDense: true,
+                    isCollapsed: true,
                   ),
+                  maxLines: 1,
                 ),
-                // Decorative sparkle in the top-right corner for aestheticness <3
-                Positioned(
-                  top: 8,
-                  right: 20,
-                  child: IgnorePointer(
-                    child: Icon(
-                      Icons.auto_awesome,
-                      size: 52,
-                      color: _lightRose,
+                const SizedBox(height: 6),
+                Row(children: [
+                  Icon(Icons.calendar_today_outlined, size: 16, color: _rosePink.withValues(alpha: 0.85)),
+                  const SizedBox(width: 8),
+                  Text(today, style: const TextStyle(fontSize: 14, color: _mutedText)),
+                ]),
+                const SizedBox(height: 24),
+                Expanded(
+                  child: TextField(
+                    controller: _bodyController,
+                    onChanged: (_) => _scheduleSave(),
+                    maxLines: null,
+                    expands: true,
+                    textAlignVertical: TextAlignVertical.top,
+                    style: const TextStyle(fontSize: 16, color: _textColor, height: 1.6),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: 'Start writing your thoughts here...',
+                      hintStyle: TextStyle(fontSize: 16, color: _mutedText, height: 1.6),
+                      contentPadding: EdgeInsets.zero,
                     ),
                   ),
                 ),
               ],
             ),
+          ),
+          const Positioned(
+            top: 8, right: 20,
+            child: IgnorePointer(child: Icon(Icons.auto_awesome, size: 52, color: _lightRose)),
+          ),
+        ],
+      ),
     );
   }
 }
