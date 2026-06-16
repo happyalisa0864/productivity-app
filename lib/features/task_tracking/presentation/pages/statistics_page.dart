@@ -48,11 +48,11 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
           if (tasksAsync.hasError) {
             return Center(child: Text('Error: ${tasksAsync.error}'));
           }
-          final tasks = tasksAsync.value ?? [];
-          // Build a unified list from historical stats + any very recent completions
+
+          // Builds a unified list from all stats
           final allCompletedData = <_TaskStatisticsData>[];
 
-              // Historical stats persist even after tasks are deleted
+              // Stats are added even after tasks are deleted
               if (statsSnapshot.hasData) {
                 for (final stat in statsSnapshot.data!) {
                   allCompletedData.add(_TaskStatisticsData(
@@ -61,31 +61,6 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
                     remainingSeconds: stat.remainingSeconds,
                     category: stat.category,
                   ));
-                }
-              }
-
-              // Catch tasks completed in the last 2 seconds that may not be saved yet
-              final currentTime = DateTime.now();
-              final recentThreshold =
-                  currentTime.subtract(const Duration(seconds: 2));
-              final completedTasks = tasks
-                  .where((t) => t.isCompleted && t.completedAt != null)
-                  .toList();
-              for (final task in completedTasks) {
-                if (task.completedAt!.isAfter(recentThreshold)) {
-                  final isInStats = statsSnapshot.hasData &&
-                      statsSnapshot.data!.any((stat) =>
-                          stat.completedAt.isAtSameMomentAs(task.completedAt!) &&
-                          stat.totalSeconds == task.totalSeconds &&
-                          stat.remainingSeconds == task.remainingSeconds);
-                  if (!isInStats) {
-                    allCompletedData.add(_TaskStatisticsData(
-                      completedAt: task.completedAt!,
-                      totalSeconds: task.totalSeconds,
-                      remainingSeconds: task.remainingSeconds,
-                      category: task.category,
-                    ));
-                  }
                 }
               }
 
@@ -100,6 +75,7 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
               final endOfWeekDate =
                   startOfWeekDate.add(const Duration(days: 7));
 
+              // Checks if task was completed this week
               bool isCompletedThisWeek(_TaskStatisticsData data) {
                 final completedAtLocal = data.completedAt.toLocal();
                 final completedDate = DateTime(
@@ -111,8 +87,7 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
                     completedDate.isBefore(endOfWeekDate);
               }
 
-              final weeklyCompletedTasks =
-                  allCompletedData.where(isCompletedThisWeek).toList();
+              final weeklyCompletedTasks = allCompletedData.where(isCompletedThisWeek).toList();
 
               // Time spent within the task's time limit (excludes overtime portion)
               final totalTimeBeforeOvertime = weeklyCompletedTasks.fold<int>(
