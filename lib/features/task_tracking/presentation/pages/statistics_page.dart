@@ -37,8 +37,8 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
           ),
         ),
       ),
-      
-      // AI ASSISTANCE FROM CURSOR AGENT USED FOR STAT STORAGE FUNCTION
+
+      // AI ASSISTANCE FROM CURSOR AGENT USED TO STORE + RESET WEEKLY STATS
       body: FutureBuilder<List<TaskStatisticsModel>>(
         future: _statsFuture ??= ref
             .read(statisticsDataSourceProvider.future)
