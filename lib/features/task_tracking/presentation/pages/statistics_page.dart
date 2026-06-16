@@ -44,6 +44,7 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
             .read(statisticsDataSourceProvider.future)
             .then((ds) => ds.getAllStatistics()),
         builder: (context, statsSnapshot) {
+          // Error handling cuz why not
           if (tasksAsync.hasError) {
             return Center(child: Text('Error: ${tasksAsync.error}'));
           }
