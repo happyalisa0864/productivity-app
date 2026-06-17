@@ -1,4 +1,6 @@
 // Main task list screen — the home screen of the app.
+// Shows all tasks in a reorderable list with add/delete FABs and navigation
+// to the notepad, settings, timer, and task edit screens.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:productivity_app/features/task_tracking/presentation/providers/task_providers.dart';
@@ -9,11 +11,12 @@ import 'package:productivity_app/features/task_tracking/presentation/pages/task_
 import 'package:productivity_app/features/task_tracking/presentation/pages/notepad_page.dart';
 import 'package:productivity_app/features/settings/presentation/pages/settings_page.dart';
 
+// Custom page transition: slides the new page in from the left.
 PageRoute<T> _createLeftSlideRoute<T extends Object?>(Widget page) {
   return PageRouteBuilder<T>(
     pageBuilder: (context, animation, secondaryAnimation) => page,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final tween = Tween(begin: const Offset(-1.0, 0.0), end: Offset.zero).chain(CurveTween(curve: Curves.ease));
+      final tween = Tween(begin: const Offset(-1.0, 0.0), end: Offset.zero).chain(CurveTween(curve: Curves.ease)); // Start from left
       return SlideTransition(position: animation.drive(tween), child: child);
     },
   );
@@ -35,7 +38,10 @@ class TasksPage extends ConsumerWidget {
           loading: () => const Text("Today's Tasks", style: _titleStyle),
           error: (_, __) => const Text("Today's Tasks", style: _titleStyle),
           data: (tasks) {
+            // Sum remaining time across incomplete tasks for the app bar subtitle
             final totalRemainingSeconds = tasks.where((t) => !t.isCompleted).fold<int>(0, (sum, task) {
+              // For incomplete tasks, use remainingSeconds (clamped to >= 0)
+              // If remainingSeconds is negative (overtime), show 0 remaining
               return sum + task.remainingSeconds.clamp(0, task.totalSeconds);
             });
             final hours = totalRemainingSeconds ~/ 3600;
@@ -61,7 +67,7 @@ class TasksPage extends ConsumerWidget {
         leading: IconButton(
           icon: const Icon(Icons.note),
           tooltip: 'Notepad',
-          onPressed: () => Navigator.of(context).push(_createLeftSlideRoute(const NotepadPage())),
+          onPressed: () => Navigator.of(context).push(_createLeftSlideRoute(const NotepadPage())), // Open the notepad with a left-slide transition
         ),
         actions: [
           IconButton(
@@ -73,43 +79,47 @@ class TasksPage extends ConsumerWidget {
       ),
       body: Stack(
         children: [
+          // Main task list (or empty state)
           tasksAsync.when(
             loading: () => const _EmptyTasksView(),
             error: (e, _) => Center(child: Text('Error: $e')),
             data: (tasks) {
               if (tasks.isEmpty) return const _EmptyTasksView();
+              // Drag to reorder tasks; each row is a TaskTile with action callbacks
               return ReorderableListView.builder(
-                padding: const EdgeInsets.only(top: 8, bottom: 120, left: 16, right: 16),
+                padding: const EdgeInsets.only(top: 8, bottom: 120, left: 16, right: 16), // Extra padding so last task is visible above FABs
                 itemCount: tasks.length,
                 onReorder: notifier.reorderTasks,
                 proxyDecorator: (child, index, animation) => Material(color: Colors.transparent, child: child),
                 itemBuilder: (context, index) {
                   final task = tasks[index];
                   return TaskTile(
-                    key: ValueKey(task.id),
+                    key: ValueKey(task.id), // CRITICAL: Must have unique key for reordering
                     task: task,
                     onStart: () {
                       notifier.startTimer(task.id);
-                      Navigator.of(context).push(_createLeftSlideRoute(TimerPage(taskId: task.id)));
+                      Navigator.of(context).push(_createLeftSlideRoute(TimerPage(taskId: task.id))); // Start timer and navigate
                     },
                     onPause: () {
                       notifier.pauseTimer();
-                      Navigator.of(context).push(_createLeftSlideRoute(TimerPage(taskId: task.id)));
+                      Navigator.of(context).push(_createLeftSlideRoute(TimerPage(taskId: task.id))); // Show paused timer screen
                     },
                     onToggleComplete: () => notifier.toggleComplete(task.id),
                     onDelete: () => notifier.deleteTask(task.id),
-                    onEdit: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditPage(taskId: task.id))),
+                    onEdit: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskEditPage(taskId: task.id))), // Open edit form
                   );
                 },
               );
             },
           ),
+          // Bottom-left FAB: delete all tasks (with confirmation)
           Positioned(
             left: 16, bottom: 50,
             child: FloatingActionButton(
               heroTag: 'clearAll',
-              backgroundColor: const Color(0xFFF5B8B1),
+              backgroundColor: const Color(0xFFF5B8B1), // Rose pink color
               onPressed: () async {
+                // Show confirmation dialog
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -126,6 +136,7 @@ class TasksPage extends ConsumerWidget {
               child: const Icon(Icons.delete_outline, color: Colors.white),
             ),
           ),
+          // Bottom-right FAB: open the add-task dialog
           Positioned(
             right: 16, bottom: 50,
             child: FloatingActionButton(
@@ -150,6 +161,7 @@ class TasksPage extends ConsumerWidget {
   }
 }
 
+// Placeholder shown when the user has no tasks yet.
 class _EmptyTasksView extends StatelessWidget {
   const _EmptyTasksView();
 

@@ -1,4 +1,5 @@
 // Edit screen for an existing task's name, time limit, and category.
+// Also allows deleting the task. Opened by tapping edit on a task tile.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:productivity_app/features/task_tracking/domain/entities/task.dart';
@@ -19,13 +20,13 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
   int _selectedMinutes = 0;
   String? _selectedCategory;
   bool _isInitialized = false;
-  String? _lastTaskId;
+  String? _lastTaskId; // Tracks which task the form fields were loaded from
 
   static const _categoryOptions = ['Work', 'Study', 'Personal', 'Health', 'Other'];
-  static const _backgroundColor = Color(0xFFFAF7F5);
+  static const _backgroundColor = Color(0xFFFAF7F5); // Match main task screen background
   static const _textColor = Color(0xFF4E4A47);
-  static const _mainPink = Color(0xFFF4C2C2);
-  static const _lighterPink = Color(0xFFF9E0E0);
+  static const _mainPink = Color(0xFFF4C2C2); // Main pink color
+  static const _lighterPink = Color(0xFFF9E0E0); // Lighter pink for input fields
 
   @override
   void initState() {
@@ -39,8 +40,10 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
     super.dispose();
   }
 
+  // Populates form fields from the task data (only once per task).
   void _initFromTask(Task t) {
     if (!mounted) return;
+    // Only initialize if this is a new task or not yet initialized
     if (_lastTaskId != t.id || !_isInitialized) {
       _titleCtrl.text = t.title;
       final totalMinutes = (t.totalSeconds / 60).round();
@@ -52,6 +55,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
     }
   }
 
+  // Maps category names to icons for the category picker.
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
       case 'work': return Icons.work;
@@ -62,18 +66,22 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
     }
   }
 
+  // Validates the form and saves changes back to the task notifier.
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final notifier = ref.read(taskNotifierProvider.notifier);
     final totalMinutes = (_selectedHours * 60) + _selectedMinutes;
+    // Get the current task to check if time limit changed
     final currentTask = ref.read(taskByIdProvider(widget.taskId)).value;
     final currentTotalMinutes = currentTask != null ? (currentTask.totalSeconds / 60).round() : null;
+    // Only update the time limit if the user actually changed it
     final minutesToUpdate = (currentTotalMinutes != null && totalMinutes != currentTotalMinutes) ? totalMinutes : null;
     await notifier.updateTask(id: widget.taskId, title: _titleCtrl.text.trim(), minutes: minutesToUpdate, category: _selectedCategory);
     if (!mounted) return;
     Navigator.of(context).pop();
   }
 
+  // Shows a confirmation dialog before permanently deleting the task.
   Future<void> _confirmDelete() async {
     final notifier = ref.read(taskNotifierProvider.notifier);
     final confirmed = await showDialog<bool>(
@@ -125,6 +133,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
+                  // TASK NAME section
                   const _SectionLabel('TASK NAME'),
                   const SizedBox(height: 8),
                   Container(
@@ -141,6 +150,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
+                  // TIME LIMIT section
                   const _SectionLabel('TIME LIMIT'),
                   const SizedBox(height: 8),
                   Container(
@@ -149,16 +159,20 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        // Hours picker
                         Expanded(child: _TimePicker(value: _selectedHours, maxValue: 23, suffix: 'HOURS', onChanged: (v) => setState(() => _selectedHours = v))),
+                        // Colon separator
                         Padding(
                           padding: const EdgeInsets.only(top: 30),
                           child: Text(':', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: _textColor, height: 1.0)),
                         ),
+                        // Minutes picker
                         Expanded(child: _TimePicker(value: _selectedMinutes, maxValue: 59, suffix: 'MINS', onChanged: (v) => setState(() => _selectedMinutes = v))),
                       ],
                     ),
                   ),
                   const SizedBox(height: 24),
+                  // CATEGORY section
                   const _SectionLabel('CATEGORY'),
                   const SizedBox(height: 8),
                   GestureDetector(
@@ -191,6 +205,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
                     ),
                   ),
                   const SizedBox(height: 40),
+                  // Save Changes button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -200,11 +215,12 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  // Delete Task button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: _confirmDelete,
-                      style: ElevatedButton.styleFrom(backgroundColor: _lighterPink, foregroundColor: const Color(0xFFFF5C8A), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
+                      style: ElevatedButton.styleFrom(backgroundColor: _lighterPink, foregroundColor: const Color(0xFFFF5C8A), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0), // Reddish pink
                       child: const Text('Delete Task', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ),
                   ),
@@ -219,16 +235,18 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
   }
 }
 
+// Pink uppercase label above each form section (e.g. "TASK NAME").
 class _SectionLabel extends StatelessWidget {
   final String label;
   const _SectionLabel(this.label);
 
   @override
   Widget build(BuildContext context) {
-    return Text(label, style: const TextStyle(color: _TaskEditPageState._mainPink, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.5));
+    return Text(label, style: const TextStyle(color: _TaskEditPageState._mainPink, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.5)); // Main pink color
   }
 }
 
+// Scroll wheel picker for hours or minutes in the time limit section.
 class _TimePicker extends StatefulWidget {
   final int value;
   final int maxValue;
@@ -272,10 +290,12 @@ class _TimePickerState extends State<_TimePicker> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        // Suffix label at top
         SizedBox(
           height: 30,
           child: Center(child: Text(widget.suffix, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor.withValues(alpha: 0.7), letterSpacing: 0.5))),
         ),
+        // Scrollable picker - numbers align with colon
         SizedBox(
           height: 100,
           child: ListWheelScrollView.useDelegate(
