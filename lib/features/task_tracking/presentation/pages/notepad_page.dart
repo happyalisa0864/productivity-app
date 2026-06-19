@@ -86,6 +86,8 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
 
     return Scaffold(
       backgroundColor: _background,
+      
+      // App bar for notepad page
       appBar: AppBar(
         backgroundColor: _background,
         foregroundColor: _textColor,

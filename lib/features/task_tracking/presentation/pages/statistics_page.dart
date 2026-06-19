@@ -18,9 +18,9 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
   // So stats aren't re-fetched on every rebuild
   Future<List<TaskStatisticsModel>>? _statsFuture;
 
-  // Formatting top of statistics page
   @override
   Widget build(BuildContext context) {
+    // App bar for statistics page
     final tasksAsync = ref.watch(taskNotifierProvider);
     final textColor = const Color(0xFF4E4A47);
     final accent = const Color(0xFFF5B8B1);
