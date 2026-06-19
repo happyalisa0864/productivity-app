@@ -128,6 +128,10 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
       loading: () => Scaffold(backgroundColor: _backgroundColor, appBar: _appBar(), body: const SizedBox.shrink()),
       error: (e, _) => Scaffold(backgroundColor: _backgroundColor, appBar: _appBar(), body: Center(child: Text('Error: $e'))),
       data: (task) {
+        if (task == null) {
+          return Scaffold(backgroundColor: _backgroundColor, appBar: _appBar(), body: const Center(child: Text('Task not found')));
+        }
+        _initFromTask(task);
         return Scaffold(
           backgroundColor: _backgroundColor,
           appBar: _appBar(),
