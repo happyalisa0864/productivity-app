@@ -1,4 +1,4 @@
-// Edit screen for a task's name, time limit, and category; allows deleting the task
+// edit screen for a task's name, time limit, and category; allows deleting the task
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:productivity_app/features/task_tracking/domain/entities/task.dart';
@@ -19,7 +19,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
   int _selectedMinutes = 0;
   String? _selectedCategory;
   bool _isInitialized = false;
-  String? _lastTaskId; // Tracks which task the form fields were loaded from
+  String? _lastTaskId; // tracks which task the form fields were loaded from
 
   static const _categoryOptions = ['Work', 'Study', 'Personal', 'Health', 'Other'];
   static const _backgroundColor = Color(0xFFFAF7F5);
@@ -27,21 +27,21 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
   static const _mainPink = Color(0xFFF4C2C2);
   static const _lighterPink = Color(0xFFF9E0E0);
 
-  // Initializing the task edit page
+  // initializing the task edit page
   @override
   void initState() {
     super.initState();
     _titleCtrl = TextEditingController();
   }
 
-  // Disposes page when user exits
+  // disposes page when user exits
   @override
   void dispose() {
     _titleCtrl.dispose();
     super.dispose();
   }
 
-  // Fills edit form with previously saved data (title, hours, minutes, category)
+  // fills edit form with previously saved data (title, hours, minutes, category)
   void _initFromTask(Task t) {
     if (!mounted) return;
 
@@ -56,7 +56,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
     }
   }
 
-  // Maps category names to icons for the category picker
+  // maps category names to icons for the category picker
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
       case 'work': return Icons.work;
@@ -67,25 +67,25 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
     }
   }
 
-  // Saves changes back to task notifier
+  // saves changes back to task notifier
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
     final notifier = ref.read(taskNotifierProvider.notifier);
     final totalMinutes = (_selectedHours * 60) + _selectedMinutes;
 
-    // Checks if user changed time limit
+    // checks if user changed time limit
     final currentTask = ref.read(taskByIdProvider(widget.taskId)).value;
     final currentTotalMinutes = currentTask != null ? (currentTask.totalSeconds / 60).round() : null;
     
-    // Updates time limit if user changed it
+    // updates time limit if user changed it
     final minutesToUpdate = (currentTotalMinutes != null && totalMinutes != currentTotalMinutes) ? totalMinutes : null;
     await notifier.updateTask(id: widget.taskId, title: _titleCtrl.text.trim(), minutes: minutesToUpdate, category: _selectedCategory);
     if (!mounted) return;
     Navigator.of(context).pop();
   }
 
-  // Confirmation dialog before permanently deleting a task
+  // confirmation dialog before permanently deleting a task
   Future<void> _confirmDelete() async {
     final notifier = ref.read(taskNotifierProvider.notifier);
     final confirmed = await showDialog<bool>(
@@ -100,7 +100,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
       ),
     );
 
-    // Deletes task if user confirmed
+    // deletes task if user confirmed
     if (confirmed == true) {
       await notifier.deleteTask(widget.taskId);
       if (!mounted) return;
@@ -108,7 +108,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
     }
   }
 
-  // App bar for task edit page
+  // app bar for task edit page
   PreferredSizeWidget _appBar({VoidCallback? onBack}) {
     return AppBar(
       backgroundColor: _backgroundColor,
@@ -119,20 +119,16 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
     );
   }
 
-  // Building the task edit page!
+  // building the task edit page!
   @override
   Widget build(BuildContext context) {
-    final taskAsync = ref.watch(taskByIdProvider(widget.taskId));
+    final task = ref.watch(taskByIdProvider(widget.taskId)).value;
+    if (task == null) {
+      return Scaffold(backgroundColor: _backgroundColor, appBar: _appBar(), body: const SizedBox.shrink());
+    }
+    _initFromTask(task);
 
-    return taskAsync.when(
-      loading: () => Scaffold(backgroundColor: _backgroundColor, appBar: _appBar(), body: const SizedBox.shrink()),
-      error: (e, _) => Scaffold(backgroundColor: _backgroundColor, appBar: _appBar(), body: Center(child: Text('Error: $e'))),
-      data: (task) {
-        if (task == null) {
-          return Scaffold(backgroundColor: _backgroundColor, appBar: _appBar(), body: const Center(child: Text('Task not found')));
-        }
-        _initFromTask(task);
-        return Scaffold(
+    return Scaffold(
           backgroundColor: _backgroundColor,
           appBar: _appBar(),
           body: SafeArea(
@@ -141,7 +137,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  // Edit task name
+                  // edit task name
                   const _SectionLabel('TASK NAME'),
                   const SizedBox(height: 8),
                   Container(
@@ -154,12 +150,12 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
                         filled: true, fillColor: _lighterPink,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                       ),
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter a task name' : null, // Makes sure user entered a task name before saving
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter a task name' : null, // makes sure user entered a task name before saving
                     ),
                   ),
                   const SizedBox(height: 24),
 
-                  // Edit time limit
+                  // edit time limit
                   const _SectionLabel('TIME LIMIT'),
                   const SizedBox(height: 8),
                   Container(
@@ -179,10 +175,10 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Edit category
+                  // edit category
                   const _SectionLabel('CATEGORY'),
                   const SizedBox(height: 8),  
-                  GestureDetector( // Makes category picker widget interactive
+                  GestureDetector( // makes category picker widget interactive
                     onTap: () {
                       showDialog(
                         context: context,
@@ -213,7 +209,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
                   ),
                   const SizedBox(height: 40),
 
-                  // Save Changes button
+                  // save changes button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -224,7 +220,7 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Delete Task button
+                  // delete task button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -238,13 +234,11 @@ class _TaskEditPageState extends ConsumerState<TaskEditPage> {
               ),
             ),
           ),
-        );
-      },
     );
   }
 }
 
-// Pink label above each input section
+// pink label above each input section
 class _SectionLabel extends StatelessWidget {
   final String label;
   const _SectionLabel(this.label);
@@ -255,7 +249,7 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-// Scroll wheel picker for hours + minutes in time limit section
+// scroll wheel picker for hours + minutes in time limit section
 class _TimePicker extends StatefulWidget {
   final int value;
   final int maxValue;
@@ -271,7 +265,7 @@ class _TimePickerState extends State<_TimePicker> {
   late FixedExtentScrollController _controller;
   int _currentValue = 0;
 
-  // Initial state with tasks' current hours + minutes
+  // initial state with tasks' current hours + minutes
   @override
   void initState() {
     super.initState();
@@ -279,7 +273,7 @@ class _TimePickerState extends State<_TimePicker> {
     _controller = FixedExtentScrollController(initialItem: widget.value);
   }
 
-  // Updates when user changes hours + minutes
+  // updates when user changes hours + minutes
   @override
   void didUpdateWidget(_TimePicker oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -289,27 +283,27 @@ class _TimePickerState extends State<_TimePicker> {
     }
   }
 
-  // Disposes scroll controller when user exits page
+  // disposes scroll controller when user exits page
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
-  // Building the time scroller!
+  // building the time scroller!
   @override
   Widget build(BuildContext context) {
     const textColor = Color(0xFF4E4A47);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // "HOURS" and "MINS" labels above scroller
+        // "hours" and "mins" labels above scroller
         SizedBox(
           height: 30,
           child: Center(child: Text(widget.suffix, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor.withValues(alpha: 0.7), letterSpacing: 0.5))),
         ),
 
-        // The scroller itself (this took so long ToT)
+        // the scroller itself (this took so long ToT)
         SizedBox(
           height: 100,
           child: ListWheelScrollView.useDelegate(
@@ -317,17 +311,17 @@ class _TimePickerState extends State<_TimePicker> {
             physics: const FixedExtentScrollPhysics(),
             controller: _controller,
             onSelectedItemChanged: (index) {
-              // Updates current value when user scrolls
+              // updates current value when user scrolls
               if (index != _currentValue) { _currentValue = index; widget.onChanged(index); }
             },
             childDelegate: ListWheelChildBuilderDelegate(
               builder: (context, index) {
-                if (index > widget.maxValue) return null; // Makes sure user doesn't scroll past max value
+                if (index > widget.maxValue) return null; // makes sure user doesn't scroll past max value
                 final isSelected = index == _currentValue;
                 return Center(
                   child: Text(
                     index.toString().padLeft(2, '0'),
-                    // The numbers in the scroller: larger when selected, smaller when not
+                    // the numbers in the scroller: larger when selected, smaller when not
                     style: TextStyle(fontSize: isSelected ? 24 : 18, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? textColor : textColor.withValues(alpha: 0.5), height: 1.0),
                   ),
                 );

@@ -1,4 +1,4 @@
-// Simple notepad for free-form notes with a title and body; content saved automatically as the user types
+// simple notepad for free-form notes with a title and body; content saved automatically as the user types
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -13,11 +13,11 @@ class NotepadPage extends ConsumerStatefulWidget {
 }
 
 class _NotepadPageState extends ConsumerState<NotepadPage> {
-  // To save changes in the note
+  // to save changes in the note
   static const String _titleKey = 'notepad_title';
   static const String _contentKey = 'notepad_content';
 
-  // Setting notepad color palette
+  // setting notepad color palette
   static const Color _background = Color(0xFFFAF7F5);
   static const Color _textColor = Color(0xFF4E4A47);
   static const Color _mutedText = Color(0xFF8B8680);
@@ -36,7 +36,7 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadNotepadContent());
   }
 
-  // AI ASSISTANCE FROM CURSOR AGENT USED FOR AUTOSAVE FUNCTION
+  // AI assistance from cursor agent used for autosave function
   @override
   void dispose() {
     _saveTimer?.cancel();
@@ -46,7 +46,7 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
     super.dispose();
   }
 
-  // Loading previously saved title and body from device storage
+  // loading previously saved title and body from device storage
   Future<void> _loadNotepadContent() async {
     try {
       final prefs = await ref.read(sharedPreferencesProvider.future);
@@ -57,7 +57,7 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
     } catch (_) {}
   }
 
-  // Autosaves current title and body
+  // autosaves current title and body
   Future<void> _saveNotepadContent() async {
     try {
       final prefs = await ref.read(sharedPreferencesProvider.future);
@@ -66,19 +66,19 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
     } catch (_) {}
   }
 
-  // So we don't save changes on every keystroke
+  // so we don't save changes on every keystroke
   void _scheduleSave() {
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(milliseconds: 500), _saveNotepadContent);
   }
 
-  // Formats today's date for display under the note title
+  // formats today's date for display under the note title
   String _formatDate(DateTime date) {
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
-  // Putting everything together to build the notepad page!
+  // putting everything together to build the notepad page!
   @override
   Widget build(BuildContext context) {
     final today = _formatDate(DateTime.now());
@@ -87,7 +87,7 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
     return Scaffold(
       backgroundColor: _background,
       
-      // App bar for notepad page
+      // app bar for notepad page
       appBar: AppBar(
         backgroundColor: _background,
         foregroundColor: _textColor,
@@ -96,7 +96,7 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
         title: const Text('Notepad', style: TextStyle(fontWeight: FontWeight.w400, fontSize: 18, color: _textColor)),
         centerTitle: true,
         actions: [
-          // More options button to clear the note
+          // more options button to clear the note
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: _textColor),
             color: const Color(0xFFFDF2E8),
@@ -159,7 +159,7 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
               ],
             ),
           ),
-          // Decorative sparkle in the top-right corner for aestheticness <3
+          // decorative sparkle in the top-right corner for aestheticness <3
           const Positioned(
             top: 8, right: 20,
             child: IgnorePointer(child: Icon(Icons.auto_awesome, size: 52, color: _lightRose)),

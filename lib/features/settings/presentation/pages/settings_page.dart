@@ -1,5 +1,5 @@
-// Settings screen with links to statistics, help, feedback, and app rating.
-// Opened from the tasks page app bar (not the bottom nav in current flow).
+// settings screen with links to statistics, help, feedback, and app rating.
+// opened from the tasks page app bar (not the bottom nav in current flow).
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -40,7 +40,7 @@ class SettingsPage extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16),
         children: [
           const _SectionHeader(title: 'Statistics'),
-          // Opens the weekly statistics breakdown page
+          // opens the weekly statistics breakdown page
           _SettingsCard(children: [
             _SettingsItem(
               icon: Icons.bar_chart,
@@ -51,7 +51,7 @@ class SettingsPage extends StatelessWidget {
           ]),
           const SizedBox(height: 24),
           const _SectionHeader(title: 'Support & Feedback'),
-          // External links: Google Forms help/feedback and in-app review
+          // external links: google forms help/feedback and in-app review
           _SettingsCard(children: [
             _SettingsItem(
               icon: Icons.help_center,
@@ -76,17 +76,17 @@ class SettingsPage extends StatelessWidget {
                 if (await inAppReview.isAvailable()) {
                   inAppReview.requestReview();
                 } else {
-                  // Fallback: open app store page
+                  // fallback: open app store page
                   final url = Uri.parse(Platform.isIOS
-                      ? 'https://apps.apple.com/app/idYOUR_APP_ID' // TODO: Replace with your App Store ID
-                      : 'https://play.google.com/store/apps/details?id=com.example.productivity_app'); // TODO: Replace with your package name
+                      ? 'https://apps.apple.com/app/idYOUR_APP_ID' // todo: replace with your app store id
+                      : 'https://play.google.com/store/apps/details?id=com.example.productivity_app'); // todo: replace with your package name
                   await _openUrl(context, url, 'Could not open app store');
                 }
               },
             ),
           ]),
           const SizedBox(height: 32),
-          // Version
+          // version
           Center(child: Text('Version 1.0.0', style: TextStyle(color: _textColor.withValues(alpha: 0.5), fontSize: 12))),
           const SizedBox(height: 32),
         ],
@@ -95,7 +95,7 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-// Section title above each group of settings rows.
+// section title above each group of settings rows.
 class _SectionHeader extends StatelessWidget {
   final String title;
   const _SectionHeader({required this.title});
@@ -109,7 +109,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// Rounded cream card that groups related settings items.
+// rounded cream card that groups related settings items.
 class _SettingsCard extends StatelessWidget {
   final List<Widget> children;
   const _SettingsCard({required this.children});
@@ -124,7 +124,7 @@ class _SettingsCard extends StatelessWidget {
   }
 }
 
-// Single tappable row with icon, label, and trailing chevron.
+// single tappable row with icon, label, and trailing chevron.
 class _SettingsItem extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -155,7 +155,7 @@ class _SettingsItem extends StatelessWidget {
   }
 }
 
-// Thin divider between items inside a settings card.
+// thin divider between items inside a settings card.
 class _Divider extends StatelessWidget {
   const _Divider();
 
