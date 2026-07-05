@@ -67,30 +67,32 @@ class TasksPage extends ConsumerWidget {
           ),
         ],
       ),
+      // building the task list page!
       body: Stack(
         children: [
-          // main task list (or empty state)
           if (tasks.isEmpty)
             const _EmptyTasksView()
           else
             ReorderableListView.builder(
-              // START HERE
+              // list of task items
               padding: const EdgeInsets.only(top: 8, bottom: 120, left: 16, right: 16), 
               itemCount: tasks.length,
               onReorder: notifier.reorderTasks,
               proxyDecorator: (child, index, animation) => Material(color: Colors.transparent, child: child),
               itemBuilder: (context, index) {
                 final task = tasks[index];
-                return TaskTile(
-                  key: ValueKey(task.id), // must have unique key for reordering
+                return TaskTile( // task tile in widgets folder
+                  key: ValueKey(task.id), // unique key for reordering tasks
                   task: task,
                   onStart: () {
                     notifier.startTimer(task.id);
-                    Navigator.of(context).push(_createLeftSlideRoute(TimerPage(taskId: task.id))); // start timer and navigate
+                    // start timer and navigate to timer page
+                    Navigator.of(context).push(_createLeftSlideRoute(TimerPage(taskId: task.id))); 
                   },
                   onPause: () {
                     notifier.pauseTimer();
-                    Navigator.of(context).push(_createLeftSlideRoute(TimerPage(taskId: task.id))); // show paused timer screen
+                    // show paused timer screen
+                    Navigator.of(context).push(_createLeftSlideRoute(TimerPage(taskId: task.id))); 
                   },
                   onToggleComplete: () => notifier.toggleComplete(task.id),
                   onDelete: () => notifier.deleteTask(task.id),
@@ -98,14 +100,14 @@ class TasksPage extends ConsumerWidget {
                 );
               },
             ),
-          // Bottom-left FAB: delete all tasks (with confirmation)
+          // delete all tasks button
           Positioned(
             left: 16, bottom: 50,
             child: FloatingActionButton(
               heroTag: 'clearAll',
-              backgroundColor: const Color(0xFFF5B8B1), // Rose pink color
+              backgroundColor: const Color(0xFFF5B8B1),
               onPressed: () async {
-                // Show confirmation dialog
+                // confirmation dialog
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -117,12 +119,12 @@ class TasksPage extends ConsumerWidget {
                     ],
                   ),
                 );
-                if (confirmed == true) await notifier.deleteAllTasks();
+                if (confirmed == true) await notifier.deleteAllTasks(); // delete all tasks if user confirmed
               },
               child: const Icon(Icons.delete_outline, color: Colors.white),
             ),
           ),
-          // Bottom-right FAB: open the add-task dialog
+          // add task button
           Positioned(
             right: 16, bottom: 50,
             child: FloatingActionButton(
@@ -132,8 +134,9 @@ class TasksPage extends ConsumerWidget {
                   context: context,
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
-                  builder: (_) => const AddTaskDialog(),
+                  builder: (_) => const AddTaskDialog(), // add task dialog in widgets folder
                 );
+                // add task if user clicks "save"
                 if (result != null) {
                   await notifier.addTask(title: result.title, minutes: result.minutes, category: result.category);
                 }
@@ -147,7 +150,7 @@ class TasksPage extends ConsumerWidget {
   }
 }
 
-// Placeholder shown when the user has no tasks yet.
+// stuff shown when user has no tasks yet
 class _EmptyTasksView extends StatelessWidget {
   const _EmptyTasksView();
 

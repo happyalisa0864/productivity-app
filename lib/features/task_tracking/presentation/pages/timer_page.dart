@@ -1,6 +1,4 @@
-// focus timer screen for a single task.
-// shows a circular countdown, play/pause, and a done button that marks
-// the task complete and optionally moves to the next task.
+// timer screen for one task: shows a circular countdown, play/pause, and a done button that marks task complete and moves to next task
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,12 +6,12 @@ import 'package:productivity_app/features/core/utils/time_format.dart';
 import 'package:productivity_app/features/task_tracking/domain/entities/task.dart';
 import 'package:productivity_app/features/task_tracking/presentation/providers/task_providers.dart';
 
-// helper function to create a page route that slides in from the left
+// same left-slide-animation as the one in tasks_page
 PageRoute<T> _createLeftSlideRoute<T extends Object?>(Widget page) {
   return PageRouteBuilder<T>(
     pageBuilder: (context, animation, secondaryAnimation) => page,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final tween = Tween(begin: const Offset(-1.0, 0.0), end: Offset.zero).chain(CurveTween(curve: Curves.ease)); // start from left
+      final tween = Tween(begin: const Offset(-1.0, 0.0), end: Offset.zero).chain(CurveTween(curve: Curves.ease));
       return SlideTransition(position: animation.drive(tween), child: child);
     },
   );
@@ -27,7 +25,7 @@ class TimerPage extends ConsumerStatefulWidget {
   ConsumerState<TimerPage> createState() => _TimerPageState();
 }
 
-// watches the task by id and renders the timer ui or handles navigation.
+// renders timer UI or handles navigation based on task's current state
 class _TimerPageState extends ConsumerState<TimerPage> {
   @override
   Widget build(BuildContext context) {
@@ -35,78 +33,79 @@ class _TimerPageState extends ConsumerState<TimerPage> {
     final notifier = ref.read(taskNotifierProvider.notifier);
 
     final task = taskAsync.value;
-    // back gesture or system back pauses the timer before leaving
     return PopScope(
+      // going back to tasks page pauses timer
       canPop: false,
-      onPopInvoked: (didPop) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
           await notifier.pauseTimer();
-          if (mounted) Navigator.of(context).pop();
+          if (!context.mounted) return;
+          Navigator.of(context).pop();
         }
       },
-      child: task == null
-          ? const Scaffold(backgroundColor: Color(0xFFFAF7F5), body: SizedBox.shrink())
-          : _TimerScaffold(
-              task: task,
-              onToggleRun: () {
-                if (task.isRunning) {
-                  notifier.pauseTimer();
-                } else if (!task.isCompleted) {
-                  notifier.startTimer(task.id);
-                }
-              },
-              onDone: () async {
-                // confirm before marking the task as complete
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Complete Task'),
-                    content: const Text('Have you finished this task?'),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-                      TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Yes')),
-                    ],
-                  ),
-                );
-                if (confirmed != true || !mounted) return;
-                await notifier.toggleComplete(task.id);
-
-                // find the next incomplete task in list order (wraps around)
-                final allTasks = ref.read(taskNotifierProvider).value ?? <Task>[];
-                Task? nextTask;
-                final currentIndex = allTasks.indexWhere((t) => t.id == task.id);
-                if (currentIndex != -1) {
-                  // look for next incomplete task after current
-                  for (int i = currentIndex + 1; i < allTasks.length; i++) {
-                    if (!allTasks[i].isCompleted) { nextTask = allTasks[i]; break; }
-                  }
-                  // if no task found after current, look from the beginning
-                  if (nextTask == null) {
-                    for (int i = 0; i < currentIndex; i++) {
-                      if (!allTasks[i].isCompleted) { nextTask = allTasks[i]; break; }
-                    }
-                  }
-                } else {
-                  // fallback: just get the first incomplete task
-                  final incomplete = allTasks.where((t) => !t.isCompleted);
-                  if (incomplete.isNotEmpty) nextTask = incomplete.first;
-                }
-
-                if (!mounted) return;
-                if (nextTask != null) {
-                  // jump straight to the next task's timer and start it
-                  Navigator.of(context).pushReplacement(_createLeftSlideRoute(TimerPage(taskId: nextTask!.id)));
-                  notifier.startTimer(nextTask.id);
-                } else {
-                  // no more incomplete tasks, go back to tasks page
-                  Navigator.of(context).pop();
-                }
-              },
-              onClose: () async {
-                await notifier.pauseTimer();
-                if (mounted) Navigator.of(context).pop();
-              },
+      child: task == null ? const Scaffold(backgroundColor: Color(0xFFFAF7F5), body: SizedBox.shrink()) : _TimerScaffold(
+        task: task,
+        // toggle play/pause button
+        onToggleRun: () {
+          if (task.isRunning) {
+            notifier.pauseTimer();
+          } else if (!task.isCompleted) {
+            notifier.startTimer(task.id);
+          }
+        },
+        onDone: () async {
+          // confirmation dialog before marking task as complete
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Complete Task'),
+              content: const Text('Have you finished this task?'),
+              actions: [
+                TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+                TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Yes')),
+              ],
             ),
+          );
+          if (confirmed != true || !context.mounted) return;
+          await notifier.toggleComplete(task.id);
+
+          // find the next incomplete task in list order
+          final allTasks = ref.read(taskNotifierProvider).value ?? <Task>[];
+          Task? nextTask;
+          final currentIndex = allTasks.indexWhere((t) => t.id == task.id);
+          if (currentIndex != -1) {
+            // look for next incomplete task after current task
+            for (int i = currentIndex + 1; i < allTasks.length; i++) {
+              if (!allTasks[i].isCompleted) { nextTask = allTasks[i]; break; }
+            }
+            // if no task found after current task, look from the beginning of the list
+            if (nextTask == null) {
+              for (int i = 0; i < currentIndex; i++) {
+                if (!allTasks[i].isCompleted) { nextTask = allTasks[i]; break; }
+              }
+            }
+          // START HERE
+          } else {
+            // fallback: just get the first incomplete task
+            final incomplete = allTasks.where((t) => !t.isCompleted);
+            if (incomplete.isNotEmpty) nextTask = incomplete.first;
+          }
+          if (!context.mounted) return;
+          if (nextTask != null) {
+            // jump straight to the next task's timer and start it
+            Navigator.of(context).pushReplacement(_createLeftSlideRoute(TimerPage(taskId: nextTask.id)));
+            notifier.startTimer(nextTask.id);
+          } else {
+            // no more incomplete tasks, go back to tasks page
+            Navigator.of(context).pop();
+          }
+        },
+        onClose: () async {
+          await notifier.pauseTimer();
+          if (!context.mounted) return;
+          Navigator.of(context).pop();
+        },
+      ),
     );
   }
 }
