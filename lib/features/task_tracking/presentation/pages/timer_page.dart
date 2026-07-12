@@ -84,22 +84,18 @@ class _TimerPageState extends ConsumerState<TimerPage> {
                 if (!allTasks[i].isCompleted) { nextTask = allTasks[i]; break; }
               }
             }
-          // START HERE
-          } else {
-            // fallback: just get the first incomplete task
-            final incomplete = allTasks.where((t) => !t.isCompleted);
-            if (incomplete.isNotEmpty) nextTask = incomplete.first;
           }
-          if (!context.mounted) return;
+          if (!context.mounted) return; // if context is not mounted, return
           if (nextTask != null) {
-            // jump straight to the next task's timer and start it
+            // move on to the next task's timer and start it
             Navigator.of(context).pushReplacement(_createLeftSlideRoute(TimerPage(taskId: nextTask.id)));
             notifier.startTimer(nextTask.id);
           } else {
-            // no more incomplete tasks, go back to tasks page
+            // no more incomplete tasks, return to tasks page
             Navigator.of(context).pop();
           }
         },
+        // pause timer andreturn to tasks page when close button is pressed
         onClose: () async {
           await notifier.pauseTimer();
           if (!context.mounted) return;
@@ -110,7 +106,7 @@ class _TimerPageState extends ConsumerState<TimerPage> {
   }
 }
 
-// the timer layout: title bar, circular progress ring, and control buttons.
+// building the timer page!
 class _TimerScaffold extends StatelessWidget {
   final Task task;
   final VoidCallback onToggleRun;
@@ -136,7 +132,7 @@ class _TimerScaffold extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 12),
-            // lightweight top bar with close button
+            // top bar with task title and close button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -144,7 +140,7 @@ class _TimerScaffold extends StatelessWidget {
                   const SizedBox(width: 40),
                   Expanded(
                     child: Text(task.title, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                   ),
                   IconButton(onPressed: onClose, icon: const Icon(Icons.close)),
                 ],
@@ -157,7 +153,7 @@ class _TimerScaffold extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const SizedBox(height: 20),
-                    // circular timer - slightly smaller with rounded ends
+                    // circular timer in the center
                     SizedBox(
                       height: 320, width: 320,
                       child: Stack(
@@ -167,38 +163,38 @@ class _TimerScaffold extends StatelessWidget {
                           CustomPaint(size: const Size(300, 300), painter: _CircularProgressPainter(progress: 1.0, strokeWidth: 24, color: accent.withValues(alpha: 0.18))),
                           // active progress ring (red when in overtime)
                           CustomPaint(size: const Size(300, 300), painter: _CircularProgressPainter(progress: progress == 0 ? 0 : progress, strokeWidth: 24, color: isOvertime ? Colors.red : accent)),
-                          // timer digits with a subtle outline for readability
+                          // timer digits
                           Stack(
                             alignment: Alignment.center,
                             children: [
-                              // white outline - draw text in multiple positions to create stroke
+                              // white outline so numbers don't blend into circle during overtime
                               ...List.generate(8, (index) {
+                                // math :D
                                 final angle = (index * math.pi * 2) / 8;
                                 return Transform.translate(
                                   offset: Offset(math.cos(angle) * 2.5, math.sin(angle) * 2.5),
-                                  child: Text(timeText, style: timerStyle?.copyWith(color: background)), // white outline using background color
+                                  child: Text(timeText, style: timerStyle?.copyWith(color: background)),
                                 );
                               }),
-                              // main text on top - color changes based on overtime
+                              // main text, turns red during overtime
                               Text(timeText, style: timerStyle?.copyWith(color: isOvertime ? Colors.red : textColor)),
                             ],
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Text('Focus Time', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: textColor.withValues(alpha: 0.7))),
                     const SizedBox(height: 24),
-                    // controls
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        // pause/play button
                         ElevatedButton(
                           onPressed: onToggleRun,
                           style: ElevatedButton.styleFrom(shape: const CircleBorder(), padding: const EdgeInsets.all(20), backgroundColor: Colors.white, foregroundColor: textColor.withValues(alpha: 0.75), elevation: 0),
                           child: Icon(task.isRunning ? Icons.pause : Icons.play_arrow, size: 32),
                         ),
                         const SizedBox(width: 24),
+                        // done button
                         ElevatedButton(
                           onPressed: onDone,
                           style: ElevatedButton.styleFrom(shape: const CircleBorder(), padding: const EdgeInsets.all(16), backgroundColor: accent, foregroundColor: Colors.white, elevation: 4),
@@ -218,7 +214,7 @@ class _TimerScaffold extends StatelessWidget {
   }
 }
 
-// draws the circular progress arc with rounded stroke ends.
+// draws the active circular progress circle
 class _CircularProgressPainter extends CustomPainter {
   final double progress;
   final double strokeWidth;
@@ -228,13 +224,14 @@ class _CircularProgressPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color..strokeWidth = strokeWidth..style = PaintingStyle.stroke..strokeCap = StrokeCap.round; // rounded ends!
+    final paint = Paint()..color = color..strokeWidth = strokeWidth..style = PaintingStyle.stroke..strokeCap = StrokeCap.round;
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - strokeWidth) / 2;
-    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), -math.pi / 2, 2 * math.pi * progress, false, paint); // start from top
+    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), -math.pi / 2, 2 * math.pi * progress, false, paint);
   }
 
+  // to make sure progress circle is only repainted when changes are made
   @override
-  bool shouldRepaint(_CircularProgressPainter oldDelegate) =>
-      oldDelegate.progress != progress || oldDelegate.strokeWidth != strokeWidth || oldDelegate.color != color;
+  bool shouldRepaint(_CircularProgressPainter oldDelegate) => 
+    oldDelegate.progress != progress || oldDelegate.strokeWidth != strokeWidth || oldDelegate.color != color;
 }
