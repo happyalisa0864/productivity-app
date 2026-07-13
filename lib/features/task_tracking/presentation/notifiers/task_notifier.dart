@@ -1,3 +1,7 @@
+// AI assistance from cursor agent used to create this file
+// owns task list in memory, loads/saves it to disk, runs the countdown timer 
+// ui pages call this via taskNotifierProvider
+
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +11,7 @@ import 'package:productivity_app/features/task_tracking/domain/entities/task.dar
 import 'package:productivity_app/features/task_tracking/domain/repositories/task_repository.dart';
 import 'package:uuid/uuid.dart';
 
+
 class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
   final TaskRepository? _repo;
   final Ref? _ref;
@@ -14,18 +19,12 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
   String? _runningTaskId;
   int _tickCountSinceLastPersist = 0;
 
-  TaskNotifier.loading()
-      : _repo = null,
-        _ref = null,
-        super(const AsyncLoading());
-
-  TaskNotifier.error(Object e, StackTrace st)
-      : _repo = null,
-        _ref = null,
-        super(AsyncError(e, st));
-
+  // used while the repository is loading, failed, or ready
+  TaskNotifier.loading() : _repo = null, _ref = null, super(const AsyncLoading());
+  TaskNotifier.error(Object e, StackTrace st) : _repo = null, _ref = null, super(AsyncError(e, st));
   TaskNotifier(this._repo, [this._ref]) : super(const AsyncLoading());
 
+  // load saved tasks into memory w/ error handling
   Future<void> init() async {
     final repo = _repo!;
     try {
@@ -36,12 +35,14 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     }
   }
 
+  // save list to disk
   Future<void> _persist(List<Task> tasks) async {
     final repo = _repo;
     if (repo == null) return;
     await repo.saveTasks(tasks);
   }
 
+  // append a new task and save to disk
   Future<void> addTask({required String title, required int minutes, String? category}) async {
     final current = state.value ?? <Task>[];
     final now = DateTime.now();
@@ -62,21 +63,15 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     await _persist(updated);
   }
 
+  // delete a task and save to disk
   Future<void> deleteTask(String id) async {
-    // If deleting the running task, stop timer
-    if (_runningTaskId == id) {
-      await pauseTimer();
-    }
     final updated = (state.value ?? <Task>[]).where((t) => t.id != id).toList();
     state = AsyncData(updated);
     await _persist(updated);
   }
 
+  // delete all tasks and save to disk
   Future<void> deleteAllTasks() async {
-    // Stop any running timer
-    if (_runningTaskId != null) {
-      await pauseTimer();
-    }
     state = const AsyncData(<Task>[]);
     await _persist(<Task>[]);
   }
@@ -84,17 +79,16 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
   Future<void> reorderTasks(int oldIndex, int newIndex) async {
     final list = [...(state.value ?? <Task>[])];
     
-    // Adjust newIndex if moving down the list
-    // This is required by ReorderableListView's behavior
+    // adjust newIndex if moving down the list
     if (oldIndex < newIndex) {
       newIndex -= 1;
     }
     
-    // Perform the reorder
+    // perform the reordering
     final task = list.removeAt(oldIndex);
     list.insert(newIndex, task);
-    
-    // Update all tasks with new updatedAt timestamp to preserve order
+    // START HERE
+    // update all tasks with new updatedAt timestamp to preserve order
     final updatedList = list.map((t) => t.copyWith(updatedAt: DateTime.now())).toList();
     
     state = AsyncData(updatedList);
