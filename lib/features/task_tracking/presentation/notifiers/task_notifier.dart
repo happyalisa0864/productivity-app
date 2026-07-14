@@ -111,6 +111,7 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     state = AsyncData(list);
     await _persist(list);
     
+    // START HERE
     // Save or remove statistics based on completion status
     if (_ref != null) {
       try {
