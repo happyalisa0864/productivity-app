@@ -87,8 +87,8 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     // perform the reordering
     final task = list.removeAt(oldIndex);
     list.insert(newIndex, task);
-    // START HERE
-    // update all tasks with new updatedAt timestamp to preserve order
+  
+    // update all tasks with timestamp to preserve order
     final updatedList = list.map((t) => t.copyWith(updatedAt: DateTime.now())).toList();
     
     state = AsyncData(updatedList);
@@ -101,72 +101,6 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     if (idx == -1) return;
     final t = list[idx];
     final completed = !t.isCompleted;
-    // If marking complete and it's running, pause first to get the latest remainingSeconds
-    if (completed && _runningTaskId == id) {
-      // Cancel timer immediately to stop any further updates
-      _timer?.cancel();
-      final runningId = _runningTaskId;
-      _runningTaskId = null;
-      
-      // Wait for any pending async timer updates to complete
-      // Use a small delay to ensure timer callbacks have finished executing
-      await Future.delayed(const Duration(milliseconds: 150));
-      
-      // Force a final update to capture the latest remainingSeconds (including negative values)
-      final currentList = [...(state.value ?? <Task>[])];
-      final currentIdx = currentList.indexWhere((t) => t.id == runningId);
-      if (currentIdx != -1) {
-        // Get the latest task state (which should have the negative remainingSeconds)
-        final latestTask = currentList[currentIdx];
-        // Update to stop running and preserve remainingSeconds (including negative values)
-        currentList[currentIdx] = latestTask.copyWith(
-          isRunning: false,
-          updatedAt: DateTime.now(),
-        );
-        state = AsyncData(currentList);
-        // Persist this final state to ensure negative remainingSeconds is saved
-        await _persist(currentList);
-        
-        // Now mark as completed with the preserved remainingSeconds
-        final finalList = [...(state.value ?? <Task>[])];
-        final finalIdx = finalList.indexWhere((t) => t.id == id);
-        if (finalIdx != -1) {
-          final finalTask = finalList[finalIdx];
-          final completedAt = completed ? DateTime.now() : null;
-          finalList[finalIdx] = finalTask.copyWith(
-            isCompleted: completed,
-            isRunning: false,
-            updatedAt: DateTime.now(),
-            completedAt: completedAt,
-          );
-          state = AsyncData(finalList);
-          await _persist(finalList);
-          
-          // Save or remove statistics based on completion status
-          if (_ref != null) {
-            try {
-              final statsDataSource = await _ref!.read(statisticsDataSourceProvider.future);
-              if (completed && completedAt != null) {
-                // Save statistics when task is completed
-                await statsDataSource.saveStatistics(
-                  TaskStatisticsModel(
-                    taskId: id,
-                    completedAt: completedAt,
-                    totalSeconds: finalTask.totalSeconds,
-                    remainingSeconds: finalTask.remainingSeconds,
-                    category: finalTask.category,
-                  ),
-                );
-              } else {
-                // Remove statistics when task is uncompleted
-                await statsDataSource.removeStatisticsForTask(id);
-              }
-            } catch (_) {}
-          }
-          return;
-        }
-      }
-    }
     final completedAt = completed ? DateTime.now() : null;
     list[idx] = t.copyWith(
       isCompleted: completed,
