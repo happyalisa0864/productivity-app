@@ -95,22 +95,6 @@ class _NotepadPageState extends ConsumerState<NotepadPage> {
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).pop()),
         title: const Text('Notepad', style: TextStyle(fontWeight: FontWeight.w400, fontSize: 18, color: _textColor)),
         centerTitle: true,
-        actions: [
-          // more options button to clear the note
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: _textColor),
-            color: const Color(0xFFFDF2E8),
-            onSelected: (value) {
-              if (value == 'clear') {
-                setState(() { _titleController.clear(); _bodyController.clear(); });
-                _saveNotepadContent();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'clear', child: Text('Clear note', style: TextStyle(color: _textColor))),
-            ],
-          ),
-        ],
       ),
       body: Stack(
         children: [

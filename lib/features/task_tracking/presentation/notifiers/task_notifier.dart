@@ -110,14 +110,13 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     );
     state = AsyncData(list);
     await _persist(list);
-    
-    // START HERE
-    // Save or remove statistics based on completion status
+
+    // save or remove stats based on completion status
     if (_ref != null) {
       try {
         final statsDataSource = await _ref!.read(statisticsDataSourceProvider.future);
         if (completed && completedAt != null) {
-          // Save statistics when task is completed
+          // save stats if task is completed
           await statsDataSource.saveStatistics(
             TaskStatisticsModel(
               taskId: id,
@@ -128,15 +127,16 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
             ),
           );
         } else {
-          // Remove statistics when task is uncompleted
+          // remove stats if task is not completed
           await statsDataSource.removeStatisticsForTask(id);
         }
       } catch (_) {}
     }
   }
-
+  
+  // start the timer for a task
   Future<void> startTimer(String id) async {
-    // Stop any existing timer first
+    // stop any existing timer first
     if (_runningTaskId != null && _runningTaskId != id) {
       await pauseTimer(save: false);
     }
@@ -147,9 +147,8 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     var task = list[idx];
     if (task.isCompleted) return; // do not start completed tasks
 
+    // if task was paused, continue from where it left off; otherwise, reset to totalSeconds
     _runningTaskId = id;
-    // If task was paused (not running and has remaining time), continue from where it left off
-    // Otherwise, reset to totalSeconds (covers: never started, or time limit was just edited)
     final wasPaused = !task.isRunning && task.remainingSeconds < task.totalSeconds;
     task = task.copyWith(
       isRunning: true,
@@ -160,6 +159,7 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     state = AsyncData(list);
     await _persist(list);
 
+    // start the timer
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       final currentList = [...(state.value ?? <Task>[])];
@@ -176,7 +176,7 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
         return;
       }
 
-      // Allow timer to go negative (overtime) - don't clamp to 0
+      // allow timer to go overtime
       final remaining = cur.remainingSeconds - 1;
       cur = cur.copyWith(
         remainingSeconds: remaining,
@@ -185,7 +185,7 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
       currentList[i] = cur;
       state = AsyncData(currentList);
       
-      // Persist less frequently to avoid excessive writes
+      // persist (save to disk) every 10 ticks to avoid hammering the disk
       _tickCountSinceLastPersist++;
       if (_tickCountSinceLastPersist >= 10) {
         _tickCountSinceLastPersist = 0;
@@ -194,15 +194,13 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     });
   }
 
+  // pause the timer for a task
   Future<void> pauseTimer({bool save = true}) async {
     _timer?.cancel();
     final runningId = _runningTaskId;
     _runningTaskId = null;
     if (runningId == null) return;
 
-    // Wait a tiny bit to ensure any in-flight timer updates complete
-    await Future.microtask(() {});
-    
     final list = [...(state.value ?? <Task>[])];
     final idx = list.indexWhere((t) => t.id == runningId);
     if (idx == -1) return;
@@ -212,6 +210,7 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     if (save) await _persist(list);
   }
 
+  // update a task's title, minutes, and/or category
   Future<void> updateTask({
     required String id,
     String? title,
@@ -227,8 +226,7 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     int? newRemainingSeconds;
     if (minutes != null) {
       newTotalSeconds = minutes * 60;
-      // If task is not running, reset to new total when time limit is edited
-      // If task is running, clamp remaining to new total if needed
+      // if task is not running, reset to new total; otherwise, clamp remaining to new total if needed
       if (!t.isRunning) {
         newRemainingSeconds = newTotalSeconds;
       } else {
